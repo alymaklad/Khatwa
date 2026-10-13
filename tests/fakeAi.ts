@@ -78,6 +78,8 @@ export class FakeAi implements AiClient {
   /** From the Nth call of a kind (1-based) onwards, that kind answers with a rate limit. */
   limitFrom: Partial<Record<'research' | 'finalize' | 'critique', number>> = {}
   waitListener: ((ms: number) => void) | null = null
+  /** The first N drafts come back as JSON the schema rejects. */
+  malformedDrafts = 0
 
   setWaitListener(listener: ((ms: number) => void) | null): void {
     this.waitListener = listener
@@ -104,6 +106,10 @@ export class FakeAi implements AiClient {
   async finalize(prompt: Prompt): Promise<RawGoalPlan> {
     this.calls.push({ kind: 'finalize', prompt })
     this.limit('finalize')
+    if (this.malformedDrafts > 0) {
+      this.malformedDrafts--
+      throw new AiError("The model's JSON did not match the expected shape: roadmap[0].resources[0]: Invalid input: expected object, received string", 'malformed')
+    }
     const next = this.drafts.length > 1 ? this.drafts.shift()! : this.drafts[0]!
     return next
   }

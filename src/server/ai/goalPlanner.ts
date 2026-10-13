@@ -126,6 +126,15 @@ export function anthropicGoalPlanner(deps: {
               feedback = err.problems.map((p) => `Structural problem: ${p}`)
               continue
             }
+            // JSON the schema could not accept, even after coercion: same treatment — say
+            // exactly where it went wrong and draft again.
+            if (err instanceof AiError && err.kind === 'malformed' && iteration < maxIterations) {
+              feedback = [
+                `Your previous reply did not follow the required JSON structure (${err.message.replace(/^.*?shape: /, '')}). ` +
+                  'Return exactly the fields described: every roadmap stage and every resource is an object, and steps are plain strings.'
+              ]
+              continue
+            }
             if (isRateLimit(err)) return stoppedEarly(null, err)
             throw err
           }

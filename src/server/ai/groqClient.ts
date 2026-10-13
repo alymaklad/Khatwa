@@ -80,6 +80,76 @@ export function toStrictSchema(schema: z.ZodType): Record<string, unknown> {
   return json
 }
 
+type JsonSchemaNode = {
+  type?: string | string[]
+  properties?: Record<string, JsonSchemaNode>
+  required?: string[]
+  items?: JsonSchemaNode
+  anyOf?: JsonSchemaNode[]
+  enum?: unknown[]
+}
+
+/**
+ * Brings a reply into the shape the schema asked for, where the model's intent is plain:
+ * a bare string where an object with a title belongs, a single value where a list belongs,
+ * an object where text belongs, a missing list or optional field. Anything it cannot place
+ * is left alone for validation to reject. Strict mode makes this unnecessary; JSON-object
+ * mode — the fallback when a model refuses strict mode — is where models slip.
+ */
+export function coerceToSchema(value: unknown, node: JsonSchemaNode | undefined): unknown {
+  if (!node) return value
+  const variants = node.anyOf ?? []
+  const types = new Set([node.type, ...variants.map((v) => v.type)].flat().filter(Boolean) as string[])
+  const objectNode = node.properties ? node : variants.find((v) => v.properties)
+  const arrayNode = node.items ? node : variants.find((v) => v.items)
+
+  // Only an optional (nullable) field may be filled in; a missing required section is a
+  // real failure, and the planner drafts again with that feedback.
+  if (value === undefined) return types.has('null') ? null : value
+  if (value === null) return value
+
+  if (objectNode?.properties) {
+    // A bare string where an object with a title belongs: that string is the title, and
+    // the object's other text fields start empty.
+    const promoted = typeof value === 'string' && 'title' in objectNode.properties
+    const obj = promoted ? { title: value } : value
+    if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+      const out: Record<string, unknown> = {}
+      for (const [key, sub] of Object.entries(objectNode.properties)) {
+        let v = coerceToSchema((obj as Record<string, unknown>)[key], sub)
+        if (v === undefined && promoted) {
+          const t = new Set([sub.type].flat())
+          v = t.has('string') ? '' : t.has('array') ? [] : v
+        }
+        if (v !== undefined) out[key] = v
+      }
+      return out
+    }
+    return value
+  }
+
+  if (arrayNode?.items) {
+    const list = Array.isArray(value) ? value : [value]
+    return list.map((item) => coerceToSchema(item, arrayNode.items))
+  }
+
+  if (types.has('string') && typeof value === 'object') {
+    // An object where text belongs: keep its words rather than lose the item.
+    const words = Object.values(value as Record<string, unknown>).filter((v) => typeof v === 'string')
+    return words.length ? words.join(' — ') : JSON.stringify(value)
+  }
+  if ((types.has('integer') || types.has('number')) && typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
+    return Number(value)
+  }
+  return value
+}
+
+function issueText(issue: z.core.$ZodIssue | undefined): string {
+  if (!issue) return ''
+  const path = issue.path.map((p) => (typeof p === 'number' ? `[${p}]` : `.${String(p)}`)).join('').replace(/^\./, '')
+  return path ? `${path}: ${issue.message}` : issue.message
+}
+
 function extractJson(text: string): unknown {
   const trimmed = text.trim()
   try {
@@ -295,6 +365,7 @@ export function groqClient(opts: {
     } catch (err) {
       const status = (err as { status?: number }).status
       if (!(err instanceof AiError) || err.kind !== 'other' || status !== 400) throw err
+      console.warn(`[groq] ${model} refused strict "${name}" output (${err.message}); retrying in JSON-object mode`)
       text = await chat({
         model,
         messages: [
@@ -310,9 +381,11 @@ export function groqClient(opts: {
       }, { failFast })
     }
 
-    const parsed = schema.safeParse(extractJson(text))
+    const parsed = schema.safeParse(coerceToSchema(extractJson(text), jsonSchema as JsonSchemaNode))
     if (!parsed.success) {
-      throw new AiError(`The model's JSON did not match the expected shape: ${parsed.error.issues[0]?.message ?? ''}`, 'malformed')
+      const problem = issueText(parsed.error.issues[0])
+      console.warn(`[groq] ${model} "${name}" reply did not match the schema: ${problem}`)
+      throw new AiError(`The model's JSON did not match the expected shape: ${problem}`, 'malformed')
     }
     return parsed.data
   }

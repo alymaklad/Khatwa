@@ -441,3 +441,21 @@ describe('roadmap', () => {
     expect(critique.user).toMatch(/Done when: You can build simple present-tense sentences aloud\./)
   })
 })
+
+describe('malformed drafts', () => {
+  it('drafts again with the exact problem instead of failing the plan', async () => {
+    const ai = new FakeAi()
+    ai.malformedDrafts = 1
+    const result = await anthropicGoalPlanner({ ai }).plan(input, emptyCalendar)
+    expect(result.plan.roadmap).toHaveLength(2)
+    expect(ai.count('finalize')).toBe(2)
+    const retry = ai.calls.filter((c) => c.kind === 'finalize')[1]!.prompt!.user
+    expect(retry).toContain('did not follow the required JSON structure (roadmap[0].resources[0]: Invalid input')
+  })
+
+  it('still fails plainly when every attempt is malformed', async () => {
+    const ai = new FakeAi()
+    ai.malformedDrafts = 10
+    await expect(anthropicGoalPlanner({ ai }).plan(input, emptyCalendar)).rejects.toThrow(/While revising: The model's JSON did not match/)
+  })
+})

@@ -6,6 +6,7 @@ import {
   GROQ_PLAN_MODELS,
   GROQ_RESEARCH_FALLBACK_MODEL,
   GROQ_RESEARCH_MODEL,
+  coerceToSchema,
   groqClient,
   toStrictSchema
 } from '@server/ai/groqClient'
@@ -38,6 +39,42 @@ const chat = (content: string, finish = 'stop'): Response =>
   json(200, { choices: [{ message: { content }, finish_reason: finish }] })
 
 const prompt = { system: 'sys', user: 'usr' }
+
+describe('coerceToSchema', () => {
+  const schema = toStrictSchema(GoalPlanSchema) as Parameters<typeof coerceToSchema>[1]
+
+  it('turns the usual JSON-object-mode slips into the shape the schema asked for', () => {
+    const plan = samplePlan()
+    const sloppy = {
+      ...plan,
+      roadmap: [
+        {
+          ...plan.roadmap[0]!,
+          // a bare string where a resource object belongs, an object where a step belongs
+          resources: ['Language Transfer'],
+          steps: [{ text: 'Work through tracks 1–20' }, 'Learn the top 100 verbs']
+        }
+      ],
+      // a single resource instead of a list
+      resources: { title: 'Graded readers', type: 'book', note: 'A1', url: null }
+    }
+    const parsed = GoalPlanSchema.safeParse(coerceToSchema(sloppy, schema))
+    expect(parsed.success).toBe(true)
+    const out = parsed.data!
+    expect(out.roadmap[0]!.resources[0]).toEqual({ title: 'Language Transfer', type: '', note: '', url: null })
+    expect(out.roadmap[0]!.steps).toEqual(['Work through tracks 1–20', 'Learn the top 100 verbs'])
+    expect(out.resources).toHaveLength(1)
+  })
+
+  it('leaves a well-formed plan exactly as it was', () => {
+    expect(coerceToSchema(samplePlan(), schema)).toEqual(samplePlan())
+  })
+
+  it('does not invent what it cannot place, so validation still rejects it', () => {
+    const parsed = GoalPlanSchema.safeParse(coerceToSchema({ ...samplePlan(), sessions: [42] }, schema))
+    expect(parsed.success).toBe(false)
+  })
+})
 
 describe('toStrictSchema', () => {
   it('produces a schema Groq strict mode accepts: every object closed and fully required', () => {
