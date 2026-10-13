@@ -108,6 +108,11 @@ export function coerceToSchema(value: unknown, node: JsonSchemaNode | undefined)
   if (value === undefined) return types.has('null') ? null : value
   if (value === null) return value
 
+  if (objectNode?.properties && Array.isArray(value) && value.length === 1 && value[0] && typeof value[0] === 'object') {
+    // The whole object wrapped in a one-item list.
+    return coerceToSchema(value[0], node)
+  }
+
   if (objectNode?.properties) {
     // A bare string where an object with a title belongs: that string is the title, and
     // the object's other text fields start empty.
@@ -365,7 +370,7 @@ export function groqClient(opts: {
     } catch (err) {
       const status = (err as { status?: number }).status
       if (!(err instanceof AiError) || err.kind !== 'other' || status !== 400) throw err
-      console.warn(`[groq] ${model} refused strict "${name}" output (${err.message}); retrying in JSON-object mode`)
+      console.warn(`[groq] ${model} strict "${name}" output failed (${err.message}); retrying in JSON-object mode`)
       text = await chat({
         model,
         messages: [
@@ -429,6 +434,8 @@ export function groqClient(opts: {
             { allowTruncated: true }
           )
           if (!text.trim()) throw new AiError('The research step returned no findings.', 'malformed')
+          const links = (text.match(/https?:\/\/\S+/g) ?? []).length
+          console.info(`[groq] research by ${candidate}${searchless ? ' (no web search)' : ''}: ${text.length} chars, ${links} link(s)${failures.length ? `; earlier attempts failed — ${failures.join(' · ')}` : ''}`)
           return searchless
             ? `(Researched without web search — no links available.)\n\n${text}`
             : text

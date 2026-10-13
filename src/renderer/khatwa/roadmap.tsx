@@ -44,9 +44,8 @@ function ResourceLine({ r }: { r: GoalResource }) {
 
 /**
  * The plan as a route: stages in order, each with what it covers, the concrete steps, how
- * to tell it is done, and the links to use. Links were found by the planner's web search
- * and opened and checked before being shown; a resource without a verified link says what
- * to search for instead.
+ * to tell it is done, and the links to use. Every link was opened and judged on topic before
+ * being shown; a resource without a verified link says what to search for instead.
  */
 export function Roadmap({ stages, now = today() }: { stages: RoadmapStage[]; now?: LocalDate }) {
   if (stages.length === 0) return null

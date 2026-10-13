@@ -66,6 +66,11 @@ describe('coerceToSchema', () => {
     expect(out.resources).toHaveLength(1)
   })
 
+  it('unwraps a plan returned inside a one-item list', () => {
+    const parsed = GoalPlanSchema.safeParse(coerceToSchema([samplePlan()], schema))
+    expect(parsed.success).toBe(true)
+  })
+
   it('leaves a well-formed plan exactly as it was', () => {
     expect(coerceToSchema(samplePlan(), schema)).toEqual(samplePlan())
   })

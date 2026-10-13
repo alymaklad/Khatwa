@@ -607,7 +607,7 @@ function Ready({
               <span className="t-h2">Your roadmap, stage by stage</span>
             </span>
             <span className="t-caption max-w-[420px] [text-wrap:pretty]">
-              What to learn and do at each stage, and the resources to use. Every link was found by a web search and opened to check it works.
+              What to learn and do at each stage, and the resources to use. Every link was opened and checked before it was shown to you.
             </span>
           </div>
           <Roadmap stages={plan.roadmap} />

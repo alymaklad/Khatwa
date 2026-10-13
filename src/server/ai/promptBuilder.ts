@@ -60,6 +60,26 @@ export function researchPrompt(input: GoalDraftInput, ctx: PlanningContext): { s
   }
 }
 
+/**
+ * With cited research, links must come from it. Without (the provider had no web search),
+ * the model may give the official address of a well-known resource. Either way every link
+ * is opened and judged on topic before the user sees it.
+ */
+function linkRule(findings: string): string[] {
+  if (/https?:\/\//i.test(findings)) {
+    return [
+      '- For every `url`, in the roadmap and in resources: only include it if it appeared verbatim in',
+      '  the research findings; otherwise set it to null and say in `note` what to search for.'
+    ]
+  }
+  return [
+    '- For every `url`, in the roadmap and in resources: give the official page of the resource (its',
+    '  own site or documentation, e.g. https://react.dev/learn) when you are confident of the exact',
+    '  address. Every link is opened and checked before the user sees it, so never guess a deep link:',
+    '  use the homepage or main docs page, or set it to null and say in `note` what to search for.'
+  ]
+}
+
 export function finalizePrompt(
   input: GoalDraftInput,
   ctx: PlanningContext,
@@ -84,8 +104,7 @@ export function finalizePrompt(
     '  `resources` — 1–3 items for this stage, `note` naming the exact part to use (chapter, module,',
     '  lesson range). Each milestone should fall at the end of a stage.',
     '- resources: the 3–6 core resources used across the whole plan.',
-    '- For every `url`, in the roadmap and in resources: only include it if it appeared verbatim in',
-    '  the research findings; otherwise set it to null and say in `note` what to search for.',
+    ...linkRule(findings),
     '- summary: two or three sentences the user will read first.'
   ]
 

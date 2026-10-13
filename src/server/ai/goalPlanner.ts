@@ -76,6 +76,7 @@ export function anthropicGoalPlanner(deps: {
       try {
         report('researching', 1)
         const findings = clampFindings(await inPhase('researching', () => ai.research(researchPrompt(input, ctx))))
+        const researchCitedLinks = /https?:\/\//i.test(findings)
 
         let feedback: string[] = []
         /** The newest draft that went through a full review, with what the review said. */
@@ -90,6 +91,11 @@ export function anthropicGoalPlanner(deps: {
             plan = { ...plan, sessions: fitted.sessions }
             notes.push(fitted.note)
           }
+          // Tracing only means something when the research cited pages. When it ran without
+          // web search there is nothing to trace against, and stripping every link would
+          // leave the user none at all — so the model may name official pages it knows,
+          // and the reviewer's live check (open the page, judge it on topic) is the gate.
+          if (!researchCitedLinks) return { plan, notes }
           const traced = keepTracedPlanLinks(plan, findings)
           if (traced.note) notes.push(traced.note)
           return { plan: traced.plan, notes }

@@ -87,11 +87,34 @@ describe('planner repairs and early stops', () => {
 
   it('removes links the research never mentioned before anything fetches them', async () => {
     const ai = new FakeAi()
-    ai.researchText = 'Findings with no links at all.'
+    // The research cited a page — just not the one the draft links to.
+    ai.researchText = 'Findings: see https://other.example/guide for pacing.'
     const result = await anthropicGoalPlanner({ ai }).plan(input, calendar)
     expect(result.plan.resources.every((r) => r.url === null)).toBe(true)
+    expect(result.plan.roadmap.flatMap((s) => s.resources).every((r) => r.url === null)).toBe(true)
     expect(ai.count('fetch')).toBe(0)
     expect(result.notes.join(' ')).toMatch(/could not be traced/)
+  })
+
+  it('keeps the model’s own links when research had no web search, and still checks each one live', async () => {
+    const ai = new FakeAi()
+    ai.researchText = '(Researched without web search — no links available.)\n\nStart with audio lessons.'
+    const result = await anthropicGoalPlanner({ ai }).plan(input, calendar)
+    expect(result.plan.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+    expect(result.plan.roadmap[0]!.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+    expect(ai.count('fetch')).toBe(1) // opened once, shared by the field pack and stage 1
+    expect(result.notes.join(' ')).not.toMatch(/could not be traced/)
+    // The drafting prompt allowed official pages instead of demanding a cited one.
+    expect(ai.calls.find((c) => c.kind === 'finalize')!.prompt!.system).toMatch(/give the official page of the resource/)
+  })
+
+  it('still drops a model-supplied link that does not open, even without web search', async () => {
+    const ai = new FakeAi()
+    ai.researchText = '(Researched without web search — no links available.)'
+    ai.pages.set('https://www.languagetransfer.org/', { ok: false, title: null, excerpt: '', error: 'http_404' })
+    const result = await anthropicGoalPlanner({ ai }).plan(input, calendar)
+    expect(result.plan.resources[0]!.url).toBeNull()
+    expect(result.plan.roadmap[0]!.resources[0]!.url).toBeNull()
   })
 
   it('returns the last reviewed draft when the limit hits during a revision', async () => {
