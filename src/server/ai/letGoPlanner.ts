@@ -32,7 +32,7 @@ export function letGoPlanner(deps: { ai: AiClient; maxIterations?: number }): Le
       ai.setWaitListener?.((ms) => onProgress?.({ ...current, waitingUntil: Date.now() + ms }))
 
       // The code checks speak about goal plans; a let-go plan's habits are its sessions.
-      const asGoal = (plan: LetGoPlan): GoalPlan => ({ summary: plan.summary, sessions: plan.sessions, milestones: [], mindMap: [], resources: [] })
+      const asGoal = (plan: LetGoPlan): GoalPlan => ({ summary: plan.summary, roadmap: [], sessions: plan.sessions, milestones: [], mindMap: [], resources: [] })
       const goalInput = { title: input.title, description: input.description, targetDate: null, weeklyMinutesBudget: input.weeklyMinutesBudget }
 
       try {

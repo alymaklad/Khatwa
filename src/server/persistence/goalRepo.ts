@@ -1,4 +1,4 @@
-import type { Goal, GoalObstacle, GoalResource, GoalStatus, MindMapNode } from '@shared/types'
+import type { Goal, GoalObstacle, GoalResource, GoalStatus, MindMapNode, RoadmapStage } from '@shared/types'
 import type { Db } from './db'
 
 interface GoalRow {
@@ -10,6 +10,7 @@ interface GoalRow {
   status: string
   mind_map_json: string
   resources_json: string
+  roadmap_json: string
   obstacles_json: string
   created_at: string
   closed_at: string | null
@@ -33,6 +34,7 @@ function toGoal(r: GoalRow): Goal {
     status: r.status as GoalStatus,
     mindMap: parseJson<MindMapNode[]>(r.mind_map_json, []),
     resources: parseJson<GoalResource[]>(r.resources_json, []),
+    roadmap: parseJson<RoadmapStage[]>(r.roadmap_json ?? '[]', []),
     obstacles: parseJson<GoalObstacle[]>(r.obstacles_json ?? '[]', []),
     createdAt: r.created_at,
     closedAt: r.closed_at
@@ -46,6 +48,7 @@ export interface GoalInsert {
   weeklyMinutesBudget: number | null
   mindMap: MindMapNode[]
   resources: GoalResource[]
+  roadmap: RoadmapStage[]
 }
 
 export function goalRepo(db: Db) {
@@ -57,9 +60,9 @@ export function goalRepo(db: Db) {
 
   const insert = db.prepare(`
     INSERT INTO goal (title, description, target_date, weekly_minutes_budget, status,
-                      mind_map_json, resources_json, created_at)
+                      mind_map_json, resources_json, roadmap_json, created_at)
     VALUES (@title, @description, @target_date, @weekly_minutes_budget, 'active',
-            @mind_map_json, @resources_json, @created_at)
+            @mind_map_json, @resources_json, @roadmap_json, @created_at)
     RETURNING id
   `)
 
@@ -81,6 +84,7 @@ export function goalRepo(db: Db) {
         weekly_minutes_budget: draft.weeklyMinutesBudget,
         mind_map_json: JSON.stringify(draft.mindMap),
         resources_json: JSON.stringify(draft.resources),
+        roadmap_json: JSON.stringify(draft.roadmap),
         created_at: new Date().toISOString()
       })
       return (await this.get(Number(info.lastInsertRowid)))!

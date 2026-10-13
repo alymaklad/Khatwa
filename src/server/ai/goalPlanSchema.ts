@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { TRIGGER_CONTEXTS, type GoalPlan, type GoalSession, type LetGoPlan } from '@shared/types'
+import { TRIGGER_CONTEXTS, type GoalPlan, type GoalResource, type GoalSession, type LetGoPlan, type RoadmapStage } from '@shared/types'
 
 /**
  * The shape the Actor must produce. Sent to the API as the structured-output format and
@@ -36,8 +36,19 @@ export const GoalResourceSchema = z.object({
   url: z.string().nullable()
 })
 
+export const RoadmapStageSchema = z.object({
+  title: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  details: z.string(),
+  steps: z.array(z.string()),
+  outcome: z.string(),
+  resources: z.array(GoalResourceSchema)
+})
+
 export const GoalPlanSchema = z.object({
   summary: z.string(),
+  roadmap: z.array(RoadmapStageSchema),
   sessions: z.array(GoalSessionSchema),
   milestones: z.array(GoalMilestoneSchema),
   mindMap: z.array(MindMapNodeSchema),
@@ -102,18 +113,50 @@ export function normalisePlan(raw: RawGoalPlan): GoalPlan {
     if (n.parentId !== null && !ids.has(n.parentId)) problems.push(`mind map node "${n.title}" points at a missing parent`)
   }
 
-  const resources = raw.resources.map((r) => ({
-    title: r.title.trim(),
-    type: r.type.trim() || 'resource',
-    note: r.note.trim(),
-    url: r.url && /^https?:\/\//i.test(r.url) ? r.url.trim() : null
-  }))
+  const resources = normaliseResources(raw.resources)
+  const roadmap = normaliseRoadmap(raw.roadmap, problems)
 
   if (sessions.length === 0) problems.push('the plan has no practice sessions')
 
   if (problems.length > 0) throw new PlanShapeError(problems)
 
-  return { summary: raw.summary.trim(), sessions, milestones, mindMap: raw.mindMap, resources }
+  return { summary: raw.summary.trim(), roadmap, sessions, milestones, mindMap: raw.mindMap, resources }
+}
+
+function normaliseResources(raw: RawGoalPlan['resources']): GoalResource[] {
+  return raw
+    .map((r) => ({
+      title: r.title.trim(),
+      type: r.type.trim() || 'resource',
+      note: r.note.trim(),
+      url: r.url && /^https?:\/\//i.test(r.url) ? r.url.trim() : null
+    }))
+    .filter((r) => r.title)
+}
+
+/** Stages need real dates in order and something to do; how the dates fit the goal is the reviewer's to judge. */
+function normaliseRoadmap(raw: RawGoalPlan['roadmap'], problems: string[]): RoadmapStage[] {
+  if (raw.length === 0) problems.push('the plan has no roadmap stages')
+  return raw.map((st, i) => {
+    const label = `roadmap stage ${i + 1} ("${st.title}")`
+    if (!st.title.trim()) problems.push(`roadmap stage ${i + 1} has no title`)
+    if (!DATE.test(st.startDate) || !DATE.test(st.endDate)) {
+      problems.push(`${label} has dates "${st.startDate}" to "${st.endDate}", expected YYYY-MM-DD`)
+    } else if (st.startDate > st.endDate) {
+      problems.push(`${label} ends before it starts`)
+    }
+    const steps = st.steps.map((x) => x.trim()).filter(Boolean)
+    if (steps.length === 0) problems.push(`${label} has no steps`)
+    return {
+      title: st.title.trim(),
+      startDate: st.startDate,
+      endDate: st.endDate,
+      details: st.details.trim(),
+      steps,
+      outcome: st.outcome.trim(),
+      resources: normaliseResources(st.resources)
+    }
+  })
 }
 
 /** Weekdays deduplicated and in range, times well-formed, names present — or a problem noted. */

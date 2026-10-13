@@ -7,7 +7,7 @@ import {
   findScheduleConflicts,
   weeklyMinutes
 } from './scheduleConflicts'
-import { BUDGET_SLACK } from './planRepair'
+import { allResources, BUDGET_SLACK, withResources } from './planRepair'
 import type { PlanningContext } from './types'
 
 /** One problem, worded twice: as an instruction for the model, and plainly for the user. */
@@ -59,6 +59,27 @@ export function deterministicIssues(input: GoalDraftInput, ctx: PlanningContext,
       }
     }
   }
+  draft.roadmap.forEach((st, i) => {
+    if (st.startDate < ctx.today) {
+      issues.push({
+        model: `Roadmap stage "${st.title}" starts ${st.startDate}, before today (${ctx.today}).`,
+        user: `The roadmap stage "${st.title}" starts in the past — move it to begin today or later.`
+      })
+    }
+    if (input.targetDate && st.endDate > input.targetDate) {
+      issues.push({
+        model: `Roadmap stage "${st.title}" ends ${st.endDate}, after the target date ${input.targetDate}.`,
+        user: `The roadmap stage "${st.title}" runs past your target date — finish it earlier.`
+      })
+    }
+    const prev = draft.roadmap[i - 1]
+    if (prev && st.startDate < prev.startDate) {
+      issues.push({
+        model: `Roadmap stage "${st.title}" starts before the stage listed ahead of it ("${prev.title}"). List stages in the order they happen.`,
+        user: `The roadmap stages "${prev.title}" and "${st.title}" are out of order.`
+      })
+    }
+  })
   for (const m of draft.milestones) {
     if (m.dueDate < ctx.today) {
       issues.push({
@@ -115,11 +136,14 @@ export function intervenor(deps: { ai: AiClient; verifyLinks?: boolean }) {
     const dropped: string[] = []
     const out: GoalResource[] = resources.map((r) => ({ ...r }))
     const reachable: { index: number; page: PageToJudge }[] = []
+    // A roadmap often points several stages at the same course; fetch each page once.
+    const fetched = new Map<string, ReturnType<AiClient['fetchPage']>>()
 
     for (let i = 0; i < out.length; i++) {
       const r = out[i]!
       if (!r.url) continue
-      const page = await ai.fetchPage(r.url)
+      if (!fetched.has(r.url)) fetched.set(r.url, ai.fetchPage(r.url))
+      const page = await fetched.get(r.url)!
       if (!page.ok) {
         dropped.push(`${r.title} <${r.url}> (${page.error ?? 'unreachable'})`)
         // Keep the suggestion, lose the link — the note still tells the user what to look for.
@@ -154,8 +178,8 @@ export function intervenor(deps: { ai: AiClient; verifyLinks?: boolean }) {
       const issues = found.map((i) => i.user)
 
       // 2. Independent link verification — fix in place, never fail the draft for it.
-      const verified = await verifyResources(draft.resources, input.title)
-      const plan: GoalPlan = { ...draft, resources: verified.resources }
+      const verified = await verifyResources(allResources(draft), input.title)
+      const plan: GoalPlan = withResources(draft, verified.resources)
       if (verified.dropped.length > 0) {
         // Already fixed in place, so the user hears it as a note; the model is still asked
         // for replacements on the next pass.

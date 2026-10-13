@@ -19,6 +19,7 @@ import { useData } from '../hooks/useData'
 import { describeRecurrence, duration, saturdayOf } from '../lib/format'
 import { currentMilestone, dayMonth, daysBetween, goalProgress, isoWeekday, monthYear, plural, today, weekDates } from '../lib/khatwa'
 import { TrailMap } from '../khatwa/charts'
+import { Roadmap } from '../khatwa/roadmap'
 import { obstaclesOf, waypointsOf } from './Mountains'
 import { FreedomDots, GuideCard, ToolsPanel, WEIGHT_LABEL, WEIGHT_TONE } from '../khatwa/letgo'
 import { useShell } from '../khatwa/nav'
@@ -360,6 +361,16 @@ export default function MountainDetail({ id }: { id: number }) {
                 height={460}
                 compact={live.length > 6}
               />
+            </section>
+          ) : null}
+
+          {goal.roadmap?.length ? (
+            <section className="kh-sheet p-6 flex flex-col gap-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <h2 className="t-h2 m-0">Roadmap</h2>
+                <span className="t-caption">{plural(goal.roadmap.length, 'stage')} · what to learn and use, in order</span>
+              </div>
+              <Roadmap stages={goal.roadmap} now={now} />
             </section>
           ) : null}
 

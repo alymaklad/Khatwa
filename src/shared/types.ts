@@ -548,8 +548,29 @@ export interface GoalResource {
   url: string | null
 }
 
+/**
+ * One stretch of the climb: what to learn or do, in what order, and with what. Stages run
+ * one after another from today to the target date; each one's links are checked the same
+ * way as the plan's resources.
+ */
+export interface RoadmapStage {
+  title: string
+  startDate: LocalDate
+  endDate: LocalDate
+  /** What this stage covers and why it comes at this point. */
+  details: string
+  /** Concrete things to study, practise or produce, in order. */
+  steps: string[]
+  /** How the user knows the stage is done. */
+  outcome: string
+  /** What to use for this stage — specific chapters, modules or exercises where possible. */
+  resources: GoalResource[]
+}
+
 export interface GoalPlan {
   summary: string
+  /** Ordered stages from today to the target; absent on drafts saved before roadmaps existed. */
+  roadmap: RoadmapStage[]
   sessions: GoalSession[]
   milestones: GoalMilestone[]
   mindMap: MindMapNode[]
@@ -688,6 +709,7 @@ export interface Goal {
   status: GoalStatus
   mindMap: MindMapNode[]
   resources: GoalResource[]
+  roadmap: RoadmapStage[]
   obstacles: GoalObstacle[]
   createdAt: Iso
   closedAt: Iso | null

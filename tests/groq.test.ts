@@ -49,8 +49,11 @@ describe('toStrictSchema', () => {
     }
     expect(s.$schema).toBeUndefined()
     expect(s.additionalProperties).toBe(false)
-    expect(s.required).toEqual(['summary', 'sessions', 'milestones', 'mindMap', 'resources'])
+    expect(s.required).toEqual(['summary', 'roadmap', 'sessions', 'milestones', 'mindMap', 'resources'])
     expect(s.properties.sessions!.items!.additionalProperties).toBe(false)
+    // Nested objects are closed too: a roadmap stage and the resources inside it.
+    expect(s.properties.roadmap!.items!.additionalProperties).toBe(false)
+    expect(s.properties.roadmap!.items!.required).toEqual(['title', 'startDate', 'endDate', 'details', 'steps', 'outcome', 'resources'])
     expect(s.properties.sessions!.items!.required).toContain('rationale')
     expect(JSON.stringify(s)).not.toContain('9007199254740991')
   })
@@ -260,22 +263,22 @@ describe('groqClient', () => {
       const ai = groqClient({ apiKey: 'k', fetchImpl: f.impl })
       const plan = await ai.finalize(prompt)
       expect(plan.sessions).toHaveLength(2)
-      const first = f.calls[0]!.body!.max_tokens as number // 3000
+      const first = f.calls[0]!.body!.max_tokens as number // 4500
       const second = f.calls[1]!.body!.max_tokens as number
-      // prompt = 9200 − 3000 = 6200; room = 8000 − 6200 − 100 = 1700
-      expect(first).toBe(3000)
-      expect(second).toBe(1700)
+      // prompt = 9200 − 4500 = 4700; room = 8000 − 4700 − 100 = 3200
+      expect(first).toBe(4500)
+      expect(second).toBe(3200)
     })
 
     it('gives a precise message when even the prompt alone is over the limit', async () => {
       const f = fakeFetch([
         () =>
           json(413, {
-            error: { message: 'Request too large ... tokens per minute (TPM): Limit 6000, Requested 9200, please reduce' }
+            error: { message: 'Request too large ... tokens per minute (TPM): Limit 6000, Requested 10700, please reduce' }
           })
       ])
       const ai = groqClient({ apiKey: 'k', fetchImpl: f.impl })
-      // prompt = 9200 − 3000 = 6200 > 6000: no cap can make this fit
+      // prompt = 10700 − 4500 = 6200 > 6000: no cap can make this fit
       await expect(ai.finalize(prompt)).rejects.toThrow(/about 6000 tokens per request .* prompt alone is ~6200/)
       expect(f.calls).toHaveLength(1)
     })
@@ -289,14 +292,16 @@ describe('groqClient', () => {
       expect(f.calls).toHaveLength(2)
     })
 
-    it('keeps output caps small enough for a free-tier request', async () => {
+    it('keeps output caps within an 8k-token free-tier request for a typical prompt', async () => {
       const f = fakeFetch([() => chat('r'), () => chat(JSON.stringify(samplePlan())), () => chat('{"verdict":"pass","feedback":[]}')])
       const ai = groqClient({ apiKey: 'k', fetchImpl: f.impl })
       await ai.research(prompt)
       await ai.finalize(prompt)
       await ai.critique(prompt)
       const caps = f.calls.map((c) => c.body!.max_tokens as number)
-      expect(Math.max(...caps)).toBeLessThanOrEqual(3000)
+      // A ~3k-token planning prompt plus the largest cap still fits 8k; a tighter tier is
+      // handled by the 413 shrink-and-retry above.
+      expect(Math.max(...caps)).toBeLessThanOrEqual(4500)
     })
   })
 

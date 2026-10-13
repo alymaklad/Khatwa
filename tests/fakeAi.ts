@@ -7,6 +7,26 @@ import type { GoalPlanner, PlanningContext } from '@server/ai/types'
 export function samplePlan(overrides: Partial<RawGoalPlan> = {}): RawGoalPlan {
   return {
     summary: 'Three short sessions a week, building to a conversation by the target date.',
+    roadmap: [
+      {
+        title: 'Foundations',
+        startDate: '2026-08-24',
+        endDate: '2026-09-05',
+        details: 'Sound and core structures first, so later vocabulary has somewhere to attach.',
+        steps: ['Work through Language Transfer tracks 1–20', 'Learn the 100 most common verbs'],
+        outcome: 'You can build simple present-tense sentences aloud.',
+        resources: [{ title: 'Language Transfer', type: 'course', note: 'Tracks 1–20', url: 'https://www.languagetransfer.org/' }]
+      },
+      {
+        title: 'First conversations',
+        startDate: '2026-09-06',
+        endDate: '2026-10-10',
+        details: 'Move from drills to speaking with a person every week.',
+        steps: ['Book a weekly 30-minute tutor session', 'Read one A1 graded reader'],
+        outcome: 'A 5-minute conversation with a tutor without switching to English.',
+        resources: [{ title: 'Graded readers', type: 'book', note: 'Search for A1 Spanish readers', url: null }]
+      }
+    ],
     sessions: [
       { name: 'Spanish vocabulary', days: [1, 3, 5], scheduledTime: '07:30', targetMinutes: 30, rationale: null },
       { name: 'Spanish listening', days: [6], scheduledTime: '10:00', targetMinutes: 45, rationale: 'Weekend immersion' }

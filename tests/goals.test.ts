@@ -154,6 +154,19 @@ describe('commit', () => {
     expect(view.resources[0]!.url).toBe('https://www.languagetransfer.org/')
   })
 
+  it('stores the roadmap on the goal, with its stages, steps and links', async () => {
+    const view = await h.goalsApi.commit(input, normalisePlan(samplePlan()), NOW)
+    expect(view.roadmap.map((s) => s.title)).toEqual(['Foundations', 'First conversations'])
+    expect(view.roadmap[0]!.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+    expect((await h.goalsApi.get(view.id))!.roadmap[1]!.steps).toHaveLength(2)
+  })
+
+  it('saves a plan from a draft that predates roadmaps, with an empty one', async () => {
+    const { roadmap: _old, ...legacy } = normalisePlan(samplePlan())
+    const view = await h.goalsApi.commit(input, legacy as never, NOW)
+    expect(view.roadmap).toEqual([])
+  })
+
   it('refuses a plan with no sessions', async () => {
     await expect(h.goalsApi.commit(input, { ...normalisePlan(samplePlan()), sessions: [] }, NOW)).rejects.toThrow(/at least one session/)
     expect(await h.goals.list()).toHaveLength(0)
@@ -246,5 +259,10 @@ describe('obstacles and the saved draft', () => {
     expect((await h.goalsApi.draft())!.savedAt).not.toBe('')
     await h.goalsApi.saveDraft(null)
     expect(await h.goalsApi.draft()).toBeNull()
+
+    // A draft saved before roadmaps existed loads with an empty one.
+    const { roadmap: _old, ...legacy } = normalisePlan(samplePlan())
+    await h.goalsApi.saveDraft({ title: 'Old', story: '', targetDate: null, weeklyMinutes: 60, anchors: [], plan: legacy as never, warnings: [], iterations: 1, savedAt: '' })
+    expect((await h.goalsApi.draft())!.plan!.roadmap).toEqual([])
   })
 })

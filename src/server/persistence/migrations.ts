@@ -362,5 +362,15 @@ CREATE INDEX idx_attachment_journal ON attachment (journal_id);
 
 ALTER TABLE goal ADD COLUMN obstacles_json TEXT NOT NULL DEFAULT '[]';
 `
+  },
+  {
+    id: 7,
+    name: 'goal roadmap',
+    sql: `
+-- The planner's stage-by-stage roadmap: what to learn or do, when, and with which links.
+-- Kept as JSON beside the mind map and resources, for the same reason: nothing else in the
+-- app schedules it — the habits and milestones it implies are already their own rows.
+ALTER TABLE goal ADD COLUMN roadmap_json TEXT NOT NULL DEFAULT '[]';
+`
   }
 ]

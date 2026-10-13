@@ -26,6 +26,7 @@ import { useTick } from '../hooks/useData'
 import { addDays, duration } from '../lib/format'
 import { dayMonth, daysBetween, monthYear, moveMilestone, plural, time12, today } from '../lib/khatwa'
 import { TrailMap } from '../khatwa/charts'
+import { Roadmap } from '../khatwa/roadmap'
 import { GripVertical, Save } from 'lucide-react'
 import { useShell } from '../khatwa/nav'
 import { Page } from '../khatwa/Page'
@@ -597,6 +598,21 @@ function Ready({
           </span>
         </div>
       </section>
+
+      {plan.roadmap?.length ? (
+        <section className="kh-sheet p-6 mb-7 flex flex-col gap-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <span className="flex flex-col gap-1">
+              <span className="t-stamp text-[var(--ochre-deep)]">The route</span>
+              <span className="t-h2">Your roadmap, stage by stage</span>
+            </span>
+            <span className="t-caption max-w-[420px] [text-wrap:pretty]">
+              What to learn and do at each stage, and the resources to use. Every link was found by a web search and opened to check it works.
+            </span>
+          </div>
+          <Roadmap stages={plan.roadmap} />
+        </section>
+      ) : null}
 
       <div className="grid gap-6 min-[1100px]:grid-cols-[minmax(0,1fr)_340px]">
         <section className="kh-sheet p-6 flex flex-col gap-5">

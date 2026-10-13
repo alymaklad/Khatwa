@@ -2,7 +2,7 @@ import type { GoalDraftInput, GoalDraftResult, GoalPlan, GoalPlanPhase, GoalPlan
 import { AiError, type AiClient } from './anthropicClient'
 import { normalisePlan, PlanShapeError } from './goalPlanSchema'
 import { deterministicIssues, intervenor as makeIntervenor, type Intervenor } from './intervenor'
-import { fitToBudget, keepTracedLinks } from './planRepair'
+import { allResources, fitToBudget, keepTracedPlanLinks, withResources } from './planRepair'
 import { finalizePrompt, researchPrompt } from './promptBuilder'
 import type { GoalPlanner, PlanningContext, ProgressCallback } from './types'
 
@@ -90,9 +90,9 @@ export function anthropicGoalPlanner(deps: {
             plan = { ...plan, sessions: fitted.sessions }
             notes.push(fitted.note)
           }
-          const traced = keepTracedLinks(plan.resources, findings)
+          const traced = keepTracedPlanLinks(plan, findings)
           if (traced.note) notes.push(traced.note)
-          return { plan: { ...plan, resources: traced.resources }, notes }
+          return { plan: traced.plan, notes }
         }
 
         /**
@@ -103,7 +103,7 @@ export function anthropicGoalPlanner(deps: {
         const stoppedEarly = (unreviewed: { plan: GoalPlan; notes: string[] } | null, err: unknown): GoalDraftResult => {
           if (last) return { plan: last.plan, iterations: current.iteration, warnings: [...last.issues, STOPPED_EARLY], notes: last.notes }
           if (!unreviewed) throw err
-          const plan = { ...unreviewed.plan, resources: unreviewed.plan.resources.map((r) => ({ ...r, url: null })) }
+          const plan = withResources(unreviewed.plan, allResources(unreviewed.plan).map((r) => ({ ...r, url: null })))
           return {
             plan,
             iterations: current.iteration,

@@ -37,7 +37,9 @@ export const GROQ_PLAN_MODELS = ['openai/gpt-oss-20b', 'openai/gpt-oss-120b']
  * are kept modest so prompt + output stays under it; a 429 is retried after the wait
  * the server asks for.
  */
-const MAX_OUTPUT = { research: 1500, plan: 3000, critique: 800, relevance: 400 }
+// The plan carries a dated roadmap with steps and links; gpt-oss also spends part of the
+// output on reasoning, so it gets the most room.
+const MAX_OUTPUT = { research: 1800, plan: 4500, critique: 900, relevance: 500 }
 /** Below this the output cap is too small to hold a plan; better to say so than to truncate. */
 const MIN_OUTPUT = 700
 const MAX_RATE_LIMIT_RETRIES = 3

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { GoalDraftInput, GoalSession } from '@shared/types'
 import { anthropicGoalPlanner } from '@server/ai/goalPlanner'
-import { fitToBudget, keepTracedLinks, MIN_SESSION_MINUTES, normaliseUrl } from '@server/ai/planRepair'
+import { allResources, fitToBudget, keepTracedLinks, keepTracedPlanLinks, MIN_SESSION_MINUTES, normaliseUrl, withResources } from '@server/ai/planRepair'
+import { normalisePlan } from '@server/ai/goalPlanSchema'
 import { weeklyMinutes } from '@server/ai/scheduleConflicts'
 import type { PlanningContext } from '@server/ai/types'
 import { FakeAi, samplePlan } from './fakeAi'
@@ -128,5 +129,27 @@ describe('planner repairs and early stops', () => {
     expect(waits).toHaveLength(1)
     expect(waits[0]! - Date.now()).toBeGreaterThan(15_000)
     expect(ai.waitListener).toBeNull()
+  })
+})
+
+describe('roadmap links', () => {
+  it('keeps a stage link the research found and clears one it did not', () => {
+    const plan = normalisePlan(samplePlan())
+    const withInvented = {
+      ...plan,
+      roadmap: plan.roadmap.map((s, i) =>
+        i === 1 ? { ...s, resources: [{ title: 'Invented', type: 'site', note: 'n', url: 'https://made-up.example/course' }] } : s
+      )
+    }
+    const { plan: traced, note } = keepTracedPlanLinks(withInvented, 'See https://www.languagetransfer.org/ for audio.')
+    expect(traced.roadmap[0]!.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+    expect(traced.roadmap[1]!.resources[0]).toMatchObject({ title: 'Invented', url: null })
+    expect(traced.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+    expect(note).toMatch(/^One suggested link could not be traced/)
+  })
+
+  it('puts every resource back where it came from', () => {
+    const plan = normalisePlan(samplePlan())
+    expect(withResources(plan, allResources(plan))).toEqual(plan)
   })
 })

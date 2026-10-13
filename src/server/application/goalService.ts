@@ -149,7 +149,9 @@ export function goalService(deps: {
           targetDate: input.targetDate,
           weeklyMinutesBudget: input.weeklyMinutesBudget,
           mindMap: plan.mindMap,
-          resources: plan.resources
+          resources: plan.resources,
+          // A plan restored from a draft saved before roadmaps existed has none.
+          roadmap: Array.isArray(plan.roadmap) ? plan.roadmap : []
         })
         for (const [i, s] of plan.sessions.entries()) await habits.create(sessionToDraft(goal.id, s, i), now)
         for (const m of plan.milestones) {
@@ -212,7 +214,10 @@ export function goalService(deps: {
 
     /** The wizard's one saved draft; null clears it. */
     async draft(): Promise<SavedGoalDraft | null> {
-      return settings.getFlag<SavedGoalDraft | null>('goalDraft', null)
+      const saved = await settings.getFlag<SavedGoalDraft | null>('goalDraft', null)
+      // Drafts saved before roadmaps existed come back with an empty one, not a missing field.
+      if (saved?.plan && !Array.isArray(saved.plan.roadmap)) return { ...saved, plan: { ...saved.plan, roadmap: [] } }
+      return saved
     },
 
     async saveDraft(draft: SavedGoalDraft | null): Promise<void> {

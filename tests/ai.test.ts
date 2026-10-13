@@ -253,7 +253,9 @@ describe('intervenor', () => {
           { title: 'B', type: 'site', note: 'b', url: 'https://b.example/' },
           { title: 'C', type: 'site', note: 'c', url: 'https://c.example/' },
           { title: 'D', type: 'book', note: 'search for it', url: null }
-        ]
+        ],
+        // Only the field-pack links are under test here.
+        roadmap: samplePlan().roadmap.map((s) => ({ ...s, resources: [] }))
       })
     )
     ai.pages.set('https://b.example/', { ok: false, title: null, excerpt: '', error: 'http_404' })
@@ -359,5 +361,83 @@ describe('goalPlanner loop', () => {
     expect(result.iterations).toBe(2)
     const second = ai.calls.filter((c) => c.kind === 'finalize')[1]!
     expect(second.prompt!.user).toContain('Structural problem: session 1 ("Ghost") has no valid weekdays')
+  })
+})
+
+// --------------------------------------------------------------- roadmap
+
+describe('roadmap', () => {
+  const stage = samplePlan().roadmap[0]!
+
+  it('is part of a valid plan: stages, steps, outcome and their own resources', () => {
+    const plan = normalisePlan(samplePlan())
+    expect(plan.roadmap).toHaveLength(2)
+    expect(plan.roadmap[0]).toMatchObject({ title: 'Foundations', startDate: '2026-08-24', endDate: '2026-09-05' })
+    expect(plan.roadmap[0]!.steps).toHaveLength(2)
+    expect(plan.roadmap[0]!.resources[0]!.url).toBe('https://www.languagetransfer.org/')
+  })
+
+  it('refuses a plan without a roadmap, a stage with bad or reversed dates, or one with no steps', () => {
+    const problems = (overrides: Parameters<typeof samplePlan>[0]): string[] => {
+      try {
+        normalisePlan(samplePlan(overrides))
+        return []
+      } catch (err) {
+        return (err as PlanShapeError).problems
+      }
+    }
+    expect(problems({ roadmap: [] })).toEqual(['the plan has no roadmap stages'])
+    expect(problems({ roadmap: [{ ...stage, endDate: 'next month' }] })[0]).toMatch(/expected YYYY-MM-DD/)
+    expect(problems({ roadmap: [{ ...stage, startDate: '2026-09-10', endDate: '2026-09-01' }] })[0]).toMatch(/ends before it starts/)
+    expect(problems({ roadmap: [{ ...stage, steps: ['  '] }] })[0]).toMatch(/has no steps/)
+  })
+
+  it('drops non-http links inside a stage, keeping the suggestion', () => {
+    const plan = normalisePlan(samplePlan({ roadmap: [{ ...stage, resources: [{ title: 'Notes', type: 'doc', note: 'n', url: 'javascript:alert(1)' }] }] }))
+    expect(plan.roadmap[0]!.resources).toEqual([{ title: 'Notes', type: 'doc', note: 'n', url: null }])
+  })
+
+  it('verifies a stage link like any other and strips it in place when it is dead', async () => {
+    const ai = new FakeAi()
+    ai.pages.set('https://dead.example/', { ok: false, title: null, excerpt: '', error: 'http_404' })
+    const plan = normalisePlan(
+      samplePlan({ roadmap: [{ ...stage, resources: [{ title: 'Gone', type: 'site', note: 'Unit 1', url: 'https://dead.example/' }] }] })
+    )
+    const review = await intervenor({ ai }).review(input, emptyCalendar, plan)
+    expect(review.plan.roadmap[0]!.resources[0]).toMatchObject({ title: 'Gone', note: 'Unit 1', url: null })
+    expect(review.feedback.join(' ')).toMatch(/Gone <https:\/\/dead\.example\/>/)
+  })
+
+  it('fetches a link shared by the field pack and a stage only once', async () => {
+    const ai = new FakeAi()
+    await intervenor({ ai }).review(input, emptyCalendar, normalisePlan(samplePlan()))
+    // languagetransfer.org is in both the resources and the first stage.
+    expect(ai.count('fetch')).toBe(1)
+  })
+
+  it('flags stages that start in the past, run past the target, or come out of order', async () => {
+    const ai = new FakeAi()
+    const later = samplePlan().roadmap[1]!
+    const plan = normalisePlan(
+      samplePlan({
+        roadmap: [
+          { ...later, startDate: '2026-09-06', endDate: '2026-12-01' },
+          { ...stage, startDate: '2026-08-01', endDate: '2026-08-30' }
+        ]
+      })
+    )
+    const review = await intervenor({ ai }).review(input, emptyCalendar, plan)
+    expect(review.accept).toBe(false)
+    expect(review.issues.join(' | ')).toMatch(/runs past your target date/)
+    expect(review.issues.join(' | ')).toMatch(/starts in the past/)
+    expect(review.issues.join(' | ')).toMatch(/out of order/)
+    expect(ai.count('critique')).toBe(0)
+  })
+
+  it('asks for the roadmap in the drafting prompt and shows it to the critic', () => {
+    expect(finalizePrompt(input, emptyCalendar, 'findings', []).system).toMatch(/roadmap: 3–6 stages/)
+    const critique = critiquePrompt(input, emptyCalendar, normalisePlan(samplePlan()), [])
+    expect(critique.user).toMatch(/2026-08-24 → 2026-09-05: Foundations/)
+    expect(critique.user).toMatch(/Done when: You can build simple present-tense sentences aloud\./)
   })
 })

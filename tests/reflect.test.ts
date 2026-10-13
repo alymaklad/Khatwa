@@ -138,7 +138,7 @@ describe('reflect service', () => {
   })
 
   it('keeps a behaviour when its mountain is deleted, clearing only the link', async () => {
-    const g = await goals.create({ title: 'Become an AI engineer', description: null, targetDate: null, weeklyMinutesBudget: null, mindMap: [], resources: [] })
+    const g = await goals.create({ title: 'Become an AI engineer', description: null, targetDate: null, weeklyMinutesBudget: null, mindMap: [], resources: [], roadmap: [] })
     const lg = await svc.letGoCreate(draft({ goalId: g.id }))
     expect((await svc.letGoGet(lg.id, NOW))!.goalTitle).toBe('Become an AI engineer')
     await goals.remove(g.id)

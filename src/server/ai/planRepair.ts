@@ -1,4 +1,4 @@
-import type { GoalResource, GoalSession } from '@shared/types'
+import type { GoalPlan, GoalResource, GoalSession } from '@shared/types'
 import { weeklyMinutes } from './scheduleConflicts'
 
 /**
@@ -82,4 +82,32 @@ export function keepTracedLinks(resources: GoalResource[], findings: string): { 
         ? null
         : `${removed === 1 ? 'One suggested link' : `${removed} suggested links`} could not be traced to a real search result, so ${removed === 1 ? 'it was' : 'they were'} left off — search for ${removed === 1 ? 'that resource' : 'those resources'} by name.`
   }
+}
+
+/**
+ * Every resource in a plan — the field pack first, then each roadmap stage's in order — as
+ * one list, so link checks run once over all of them.
+ */
+export function allResources(plan: GoalPlan): GoalResource[] {
+  return [...plan.resources, ...plan.roadmap.flatMap((s) => s.resources)]
+}
+
+/** The inverse of `allResources`: puts a same-length list back where each item came from. */
+export function withResources(plan: GoalPlan, list: GoalResource[]): GoalPlan {
+  let at = plan.resources.length
+  return {
+    ...plan,
+    resources: list.slice(0, at),
+    roadmap: plan.roadmap.map((s) => {
+      const mine = list.slice(at, at + s.resources.length)
+      at += s.resources.length
+      return { ...s, resources: mine }
+    })
+  }
+}
+
+/** `keepTracedLinks` over the whole plan, roadmap included. */
+export function keepTracedPlanLinks(plan: GoalPlan, findings: string): { plan: GoalPlan; note: string | null } {
+  const traced = keepTracedLinks(allResources(plan), findings)
+  return { plan: withResources(plan, traced.resources), note: traced.note }
 }

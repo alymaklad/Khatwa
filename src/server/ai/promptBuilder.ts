@@ -43,9 +43,11 @@ export function researchPrompt(input: GoalDraftInput, ctx: PlanningContext): { s
       'practice sites, communities) and realistic pacing guidance for the goal. Prefer well-known,',
       'stable sources. For each resource you intend to recommend, note its exact URL as it appeared',
       'in the search results — a later step will verify each link, and a wrong URL will be discarded.',
-      'Finish with a concise summary of what you found — under 500 words: up to six recommended',
-      'resources with their URLs, a realistic sense of how long the goal takes at the stated weekly',
-      'time budget, and the main sub-topics. Do not produce the final plan yet.'
+      'Finish with a concise summary of what you found — under 600 words: the order in which the',
+      'sub-topics are usually learned (what comes first and why); up to eight recommended resources',
+      'with their URLs, each with the specific part to use (chapter, module, playlist, exercise set)',
+      'and the stage it suits; and a realistic sense of how long the goal takes at the stated weekly',
+      'time budget. Do not produce the final plan yet.'
     ].join(' '),
     user: [
       `Goal: ${input.title}`,
@@ -73,8 +75,17 @@ export function finalizePrompt(
     '  concrete, checkable outcome (not "keep practising").',
     '- mindMap: one root node whose title is the goal, then sub-topics as children. Use short ids',
     '  like "root", "n1", "n2". Every parentId must reference an existing id.',
-    '- resources: only include a `url` if it appeared verbatim in the research findings; otherwise',
-    '  set it to null and describe what to search for in `note`.',
+    '- roadmap: 3–6 stages that take the user from today to the target date, in the order they',
+    '  happen, back to back (each starts on or after the previous one ends). For each stage:',
+    '  `details` — what it covers and why it comes here (2–3 sentences, under 60 words);',
+    '  `steps` — 2–5 concrete things to study, practise or produce, each a short imperative line',
+    '  naming the actual topic ("Learn the 6 German case endings for der/die/das", not "study grammar");',
+    '  `outcome` — one checkable sentence for when the stage is done;',
+    '  `resources` — 1–3 items for this stage, `note` naming the exact part to use (chapter, module,',
+    '  lesson range). Each milestone should fall at the end of a stage.',
+    '- resources: the 3–6 core resources used across the whole plan.',
+    '- For every `url`, in the roadmap and in resources: only include it if it appeared verbatim in',
+    '  the research findings; otherwise set it to null and say in `note` what to search for.',
     '- summary: two or three sentences the user will read first.'
   ]
 
@@ -112,6 +123,13 @@ function renderPlan(plan: GoalPlan): string {
   for (const m of plan.milestones) {
     lines.push(`  - ${m.dueDate}: ${m.title}` + (m.description ? ` — ${m.description}` : ''))
   }
+  lines.push('', 'Roadmap:')
+  for (const st of plan.roadmap) {
+    lines.push(`  - ${st.startDate} → ${st.endDate}: ${st.title} — ${st.details}`)
+    for (const step of st.steps) lines.push(`      • ${step}`)
+    lines.push(`      Done when: ${st.outcome}`)
+    for (const r of st.resources) lines.push(`      Uses: ${r.title}${r.url ? ` <${r.url}>` : ''} — ${r.note}`)
+  }
   lines.push('', 'Resources:')
   for (const r of plan.resources) {
     lines.push(`  - [${r.type}] ${r.title}${r.url ? ` <${r.url}>` : ''} — ${r.note}`)
@@ -134,7 +152,8 @@ export function critiquePrompt(
     system: [
       'You are reviewing a learning plan someone else drafted. Judge it against the goal and the',
       'constraints only. Fail it if: the pacing is unrealistic for the time budget and deadline;',
-      'milestones are vague or out of order; the sessions do not plausibly add up to the milestones;',
+      'milestones are vague or out of order; the roadmap stages are generic (steps that do not name',
+      'actual topics or tasks) or do not lead to the goal; the sessions do not plausibly add up to the milestones;',
       'the resources are off-topic or padded; or the plan ignores something the user said.',
       'Pass it if it is realistic, concrete and respects the constraints, even if it is not the plan',
       'you would have written. Feedback must be specific and actionable — name the session,',
