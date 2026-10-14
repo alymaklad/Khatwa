@@ -1,0 +1,1359 @@
+/*
+ * Khatwa — the "Contour" design.
+ *
+ * A climber's field notebook: cool alpine paper, granite ink, contour lines for the
+ * mountains and painted trail blazes for progress. One signal colour (blaze yellow,
+ * always a fill, never text) marks what is now or next; pine marks what is done.
+ * Everything is scoped under .k2 so the classic design is untouched.
+ */
+
+/* In the components layer, so Tailwind utilities on an element still win. */
+@layer components {
+
+/* The classic app scrolls inside its own panes; the new design scrolls the page. */
+body:has(#root > .k2) {
+  overflow: auto;
+}
+
+#root:has(> .k2) {
+  height: auto;
+  min-height: 100%;
+}
+
+.k2 {
+  --k2-snow: #f4f6f5;
+  --k2-sheet: #ffffff;
+  --k2-granite: #1f2b30;
+  --k2-mist: #5e6e73;
+  --k2-faint: #8b989b;
+  --k2-contour: #c9d4d3;
+  --k2-contour-soft: #e2e9e8;
+  --k2-blaze: #f0b429;
+  --k2-blaze-soft: #fbedc6;
+  --k2-pine: #2e6b57;
+  --k2-pine-soft: #dcebe4;
+  --k2-alert: #b3261e;
+  --k2-on-dark: #ffffff;
+  --k2-shadow: 0 1px 2px rgba(31, 43, 48, 0.06), 0 6px 20px -8px rgba(31, 43, 48, 0.18);
+  --k2-paper-line: #d7e0df;
+  --k2-margin: #e7b7a8;
+
+  --k2-sans: 'Schibsted Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --k2-serif: 'Literata Variable', Georgia, 'Times New Roman', serif;
+
+  min-height: 100dvh;
+  background: var(--k2-snow);
+  color: var(--k2-granite);
+  font-family: var(--k2-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme='dark'] .k2 {
+  --k2-snow: #12191c;
+  --k2-sheet: #182226;
+  --k2-granite: #e6eceb;
+  --k2-mist: #9aa9ac;
+  --k2-faint: #6f7f83;
+  --k2-contour: #2f3e43;
+  --k2-contour-soft: #223035;
+  --k2-blaze: #f2c14e;
+  --k2-blaze-soft: #3a3220;
+  --k2-pine: #6fb59a;
+  --k2-pine-soft: #1f3530;
+  --k2-alert: #f08a7e;
+  --k2-on-dark: #12191c;
+  --k2-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --k2-paper-line: #26353a;
+  --k2-margin: #5a3a33;
+}
+
+.k2 *:focus-visible {
+  outline: 2px solid var(--k2-granite);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------------ navigation */
+
+.k2-nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: 64px;
+  padding: 0 32px;
+  background: color-mix(in srgb, var(--k2-snow) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--k2-contour-soft);
+}
+
+.k2-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  color: var(--k2-granite);
+}
+
+/* The trail blaze: a painted mark, the way hikers find the path. */
+.k2-blaze {
+  display: inline-block;
+  width: 18px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--k2-blaze);
+  transform: skewX(-8deg);
+}
+
+.k2-blaze.is-done {
+  background: var(--k2-pine);
+}
+
+.k2-blaze.is-open {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--k2-contour);
+}
+
+.k2-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.k2-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 64px;
+  padding: 0 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--k2-mist);
+  transition: color 0.15s;
+}
+
+.k2-tab:hover {
+  color: var(--k2-granite);
+}
+
+.k2-tab[aria-current='page'] {
+  color: var(--k2-granite);
+  font-weight: 650;
+}
+
+.k2-tab[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--k2-blaze);
+  transform: skewX(-12deg);
+}
+
+.k2-tab svg {
+  display: none;
+}
+
+.k2-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--k2-granite);
+  color: var(--k2-on-dark);
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.k2-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 240px;
+  padding: 6px;
+  background: var(--k2-sheet);
+  border: 1px solid var(--k2-contour-soft);
+  border-radius: 12px;
+  box-shadow: var(--k2-shadow);
+  z-index: 40;
+}
+
+.k2-menu a,
+.k2-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--k2-granite);
+  text-align: left;
+}
+
+.k2-menu a:hover,
+.k2-menu button:hover {
+  background: var(--k2-snow);
+}
+
+.k2-menu hr {
+  border: 0;
+  border-top: 1px solid var(--k2-contour-soft);
+  margin: 6px 4px;
+}
+
+/* On a phone the four places sit under the thumb. */
+@media (max-width: 760px) {
+  /* A backdrop filter would trap the fixed tab bar inside the header. */
+  .k2-nav {
+    height: 56px;
+    padding: 0 16px;
+    background: var(--k2-snow);
+    backdrop-filter: none;
+  }
+
+  .k2-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    justify-content: space-around;
+    gap: 0;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+    background: var(--k2-sheet);
+    border-top: 1px solid var(--k2-contour-soft);
+  }
+
+  .k2-tab {
+    flex-direction: column;
+    gap: 3px;
+    height: 56px;
+    flex: 1;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .k2-tab svg {
+    display: block;
+  }
+
+  .k2-tab[aria-current='page']::after {
+    top: 0;
+    bottom: auto;
+    left: 30%;
+    right: 30%;
+  }
+}
+
+/* ------------------------------------------------------------------ page */
+
+.k2-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 32px 120px;
+}
+
+.k2-page.is-wide {
+  max-width: 1120px;
+}
+
+@media (max-width: 760px) {
+  .k2-page {
+    padding: 24px 16px 120px;
+  }
+}
+
+.k2-title {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.k2-lede {
+  margin: 8px 0 0;
+  color: var(--k2-mist);
+  font-size: 17px;
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+
+.k2-h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.k2-section {
+  margin-top: 48px;
+}
+
+.k2-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.k2-muted {
+  color: var(--k2-mist);
+}
+
+.k2-small {
+  font-size: 14px;
+  color: var(--k2-mist);
+}
+
+/* ---------------------------------------------------------------- lists */
+
+.k2-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--k2-contour-soft);
+}
+
+.k2-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--k2-contour-soft);
+}
+
+.k2-row.is-link {
+  cursor: pointer;
+}
+
+.k2-row.is-link:hover {
+  background: color-mix(in srgb, var(--k2-sheet) 70%, transparent);
+}
+
+.k2-row-time {
+  width: 52px;
+  flex: none;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--k2-mist);
+}
+
+.k2-narrow {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .k2-row-time {
+    display: none;
+  }
+
+  .k2-narrow {
+    display: inline;
+  }
+}
+
+.k2-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.k2-row-title {
+  font-size: 17px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.k2-row.is-done .k2-row-title {
+  color: var(--k2-mist);
+  text-decoration: line-through;
+  text-decoration-color: var(--k2-contour);
+}
+
+/* ------------------------------------------------------------- controls */
+
+.k2-check {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 2px var(--k2-contour);
+  color: transparent;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.k2-check:hover {
+  box-shadow: inset 0 0 0 2px var(--k2-pine);
+}
+
+.k2-check[aria-checked='true'] {
+  background: var(--k2-pine);
+  box-shadow: none;
+  color: var(--k2-on-dark);
+}
+
+.k2-check.is-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.k2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--k2-granite);
+  color: var(--k2-on-dark);
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.k2-btn:hover {
+  opacity: 0.9;
+}
+
+.k2-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.k2-btn.is-blaze {
+  background: var(--k2-blaze);
+  color: #1f2b30;
+}
+
+.k2-btn.is-quiet {
+  background: transparent;
+  color: var(--k2-granite);
+  box-shadow: inset 0 0 0 1px var(--k2-contour);
+}
+
+.k2-btn.is-quiet:hover {
+  background: var(--k2-sheet);
+  opacity: 1;
+}
+
+.k2-btn.is-small {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.k2-link {
+  color: var(--k2-pine);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.k2-link:hover {
+  text-decoration: underline;
+}
+
+.k2-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--k2-sheet);
+  border: 1px solid var(--k2-contour);
+  color: var(--k2-granite);
+  font: inherit;
+}
+
+.k2-input::placeholder {
+  color: var(--k2-faint);
+}
+
+.k2-input:focus {
+  outline: none;
+  border-color: var(--k2-granite);
+}
+
+.k2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 550;
+}
+
+.k2-alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--k2-alert) 10%, var(--k2-sheet));
+  color: var(--k2-alert);
+  font-size: 15px;
+}
+
+/* Today's trail: one blaze per scheduled habit. */
+.k2-trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.k2-trail .k2-blaze {
+  width: 34px;
+  height: 12px;
+}
+
+/* ------------------------------------------------------------ mountains */
+
+.k2-peak {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.k2-peak .contour {
+  fill: none;
+  stroke: var(--k2-contour);
+  stroke-width: 1.2;
+}
+
+.k2-peak .contour.is-index {
+  stroke-width: 2;
+}
+
+.k2-peak .trail {
+  fill: none;
+  stroke: var(--k2-granite);
+  stroke-width: 2.2;
+  stroke-dasharray: 6 7;
+  stroke-linecap: round;
+}
+
+.k2-peak .trail.is-walked {
+  stroke: var(--k2-pine);
+  stroke-dasharray: none;
+  stroke-width: 3;
+}
+
+.k2-peak .waypoint {
+  fill: var(--k2-sheet);
+  stroke: var(--k2-granite);
+  stroke-width: 2;
+}
+
+.k2-peak .waypoint.is-done {
+  fill: var(--k2-pine);
+  stroke: var(--k2-pine);
+}
+
+.k2-peak .you {
+  fill: var(--k2-blaze);
+  stroke: var(--k2-granite);
+  stroke-width: 2;
+}
+
+/* Compact mountains are drawn small, so their lines are drawn heavier to read at size. */
+.k2-peak.is-compact .contour {
+  stroke-width: 2.4;
+}
+
+.k2-peak.is-compact .contour.is-index {
+  stroke-width: 4;
+}
+
+.k2-peak.is-compact .trail {
+  stroke-width: 4;
+  stroke-dasharray: 10 11;
+}
+
+.k2-peak.is-compact .trail.is-walked {
+  stroke-width: 6;
+  stroke-dasharray: none;
+}
+
+.k2-peak.is-compact .waypoint,
+.k2-peak.is-compact .you {
+  stroke-width: 4;
+}
+
+/* On a phone the big mountain is drawn as small as a card one, so it takes the same weights. */
+@media (max-width: 560px) {
+  .k2-peak .contour {
+    stroke-width: 2.4;
+  }
+
+  .k2-peak .contour.is-index {
+    stroke-width: 4;
+  }
+
+  .k2-peak .trail {
+    stroke-width: 4;
+    stroke-dasharray: 10 11;
+  }
+
+  .k2-peak .trail.is-walked {
+    stroke-width: 6;
+  }
+
+  .k2-peak .waypoint,
+  .k2-peak .you {
+    stroke-width: 4;
+  }
+
+  .k2-peak .waypoint {
+    r: 12px;
+  }
+
+  .k2-peak .you {
+    r: 17px;
+  }
+
+  .k2-peak .peak-label {
+    display: none;
+  }
+}
+
+.k2-peak .peak-label {
+  font-family: var(--k2-sans);
+  font-size: 13px;
+  fill: var(--k2-granite);
+}
+
+.k2-peak .peak-label.is-faint {
+  fill: var(--k2-mist);
+}
+
+.k2-mountain-hero {
+  margin-top: 28px;
+  background: var(--k2-sheet);
+  border-radius: 18px;
+  padding: 8px 8px 0;
+  box-shadow: var(--k2-shadow);
+  overflow: hidden;
+}
+
+.k2-stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 32px;
+  margin-top: 20px;
+}
+
+.k2-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.k2-stat b {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.k2-stat span {
+  font-size: 14px;
+  color: var(--k2-mist);
+}
+
+/* The roadmap: stages walked along a trail line. */
+.k2-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.k2-stage {
+  position: relative;
+  padding: 0 0 32px 44px;
+}
+
+.k2-stage::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 28px;
+  bottom: 0;
+  border-left: 2px dashed var(--k2-contour);
+}
+
+.k2-stage:last-child::before {
+  display: none;
+}
+
+.k2-stage-dot {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--k2-sheet);
+  box-shadow: inset 0 0 0 2px var(--k2-contour);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--k2-mist);
+}
+
+.k2-stage.is-done .k2-stage-dot {
+  background: var(--k2-pine);
+  box-shadow: none;
+  color: var(--k2-on-dark);
+}
+
+.k2-stage.is-now .k2-stage-dot {
+  background: var(--k2-blaze);
+  box-shadow: none;
+  color: #1f2b30;
+}
+
+.k2-stage.is-done::before {
+  border-left-style: solid;
+  border-left-color: var(--k2-pine);
+}
+
+.k2-stage-when {
+  font-size: 14px;
+  color: var(--k2-mist);
+  font-variant-numeric: tabular-nums;
+}
+
+.k2-stage h3 {
+  margin: 2px 0 6px;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.k2-stage p {
+  margin: 0;
+  color: var(--k2-mist);
+  max-width: 62ch;
+}
+
+.k2-stage ol {
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.k2-stage li {
+  margin: 4px 0;
+  padding-left: 2px;
+}
+
+.k2-stage li::marker {
+  color: var(--k2-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.k2-done-when {
+  margin-top: 12px;
+  padding-left: 12px;
+  border-left: 3px solid var(--k2-blaze);
+  font-size: 15px;
+}
+
+.k2-resources {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.k2-resource {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 15px;
+}
+
+.k2-resource a {
+  font-weight: 600;
+  color: var(--k2-granite);
+  text-decoration: underline;
+  text-decoration-color: var(--k2-blaze);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.k2-resource a:hover {
+  text-decoration-color: var(--k2-granite);
+}
+
+.k2-resource span {
+  color: var(--k2-mist);
+}
+
+.k2-mountain-card {
+  display: grid;
+  gap: 14px;
+  padding: 10px 10px 20px;
+  border-radius: 16px;
+  background: var(--k2-sheet);
+  box-shadow: var(--k2-shadow);
+  text-align: left;
+  width: 100%;
+}
+
+.k2-mountain-card:hover {
+  box-shadow: 0 0 0 2px var(--k2-contour), var(--k2-shadow);
+}
+
+.k2-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--k2-contour-soft);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.k2-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--k2-pine);
+}
+
+.k2-mountain-card > .k2-peak {
+  border-radius: 10px;
+  background: var(--k2-snow);
+}
+
+.k2-mountain-card > span {
+  padding: 0 10px;
+}
+
+/* -------------------------------------------------------------- journal */
+
+.k2-journal {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .k2-journal {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.k2-pages {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100dvh - 120px);
+  overflow: auto;
+}
+
+.k2-pages button {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.k2-pages button:hover {
+  background: var(--k2-sheet);
+}
+
+.k2-pages button[aria-current='true'] {
+  background: var(--k2-sheet);
+  box-shadow: inset 3px 0 0 var(--k2-blaze);
+}
+
+.k2-pages b {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.k2-pages span {
+  font-size: 13px;
+  color: var(--k2-mist);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .k2-pages {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    max-height: none;
+    padding-bottom: 4px;
+  }
+
+  .k2-pages button {
+    flex: none;
+    max-width: 160px;
+  }
+}
+
+/*
+ * The page itself. The ruling and the text share one 32px rhythm, so what is typed
+ * sits on the lines like ink on a notebook page.
+ */
+.k2-paper {
+  --rule: 32px;
+  --margin-at: 59px;
+  position: relative;
+  isolation: isolate;
+  background: var(--k2-sheet);
+  border-radius: 4px 14px 14px 4px;
+  box-shadow: var(--k2-shadow);
+  padding: 0 40px var(--rule) 84px;
+  min-height: 560px;
+  font-family: var(--k2-serif);
+}
+
+/* Ruling starts under the date, one line per rule: a tile one rule tall with its line at the foot. */
+.k2-paper::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--rule) * 3) 0 0;
+  z-index: -1;
+  background: linear-gradient(to top, var(--k2-paper-line) 1px, transparent 1px) 0 0 / 100% var(--rule) repeat-y;
+}
+
+/* The red margin line runs the full height of the page. */
+.k2-paper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--margin-at);
+  width: 1px;
+  z-index: -1;
+  background: var(--k2-margin);
+}
+
+@media (max-width: 560px) {
+  .k2-paper {
+    padding: 0 18px var(--rule) 18px;
+  }
+
+  .k2-paper::after {
+    display: none;
+  }
+}
+
+.k2-paper-head {
+  height: calc(var(--rule) * 3);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.k2-paper-date {
+  font-family: var(--k2-serif);
+  font-style: italic;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--k2-granite);
+}
+
+.k2-paper-title {
+  display: block;
+  width: 100%;
+  height: var(--rule);
+  border: 0;
+  background: transparent;
+  font-family: var(--k2-serif);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: var(--rule);
+  color: var(--k2-granite);
+  padding: 0;
+}
+
+.k2-paper-body {
+  display: block;
+  width: 100%;
+  min-height: calc(var(--rule) * 12);
+  border: 0;
+  background: transparent;
+  resize: none;
+  overflow: hidden;
+  font-family: var(--k2-serif);
+  font-size: 18px;
+  line-height: var(--rule);
+  color: var(--k2-granite);
+  padding: 0;
+  field-sizing: content;
+}
+
+.k2-paper-title:focus,
+.k2-paper-body:focus {
+  outline: none;
+}
+
+.k2-paper-title::placeholder,
+.k2-paper-body::placeholder {
+  color: var(--k2-faint);
+  font-style: italic;
+}
+
+.k2-paper-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  min-height: var(--rule);
+  font-family: var(--k2-sans);
+  font-size: 14px;
+  color: var(--k2-mist);
+}
+
+.k2-mood {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  font-size: 14px;
+  color: var(--k2-mist);
+  box-shadow: inset 0 0 0 1px var(--k2-contour);
+}
+
+.k2-mood[aria-pressed='true'] {
+  background: var(--k2-granite);
+  color: var(--k2-on-dark);
+  box-shadow: none;
+}
+
+/* Photos taped onto the page. */
+.k2-prints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 14px 0;
+}
+
+.k2-print {
+  position: relative;
+  width: 150px;
+  padding: 8px 8px 26px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(31, 43, 48, 0.18);
+}
+
+.k2-print:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+
+.k2-print:nth-child(even) {
+  transform: rotate(1.5deg);
+}
+
+.k2-print::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 56px;
+  height: 18px;
+  margin-left: -28px;
+  background: color-mix(in srgb, var(--k2-blaze) 45%, transparent);
+  transform: rotate(-3deg);
+}
+
+.k2-print img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.k2-print button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 43, 48, 0.75);
+  color: #fff;
+  opacity: 0;
+}
+
+.k2-print:hover button,
+.k2-print button:focus-visible {
+  opacity: 1;
+}
+
+.k2-saved {
+  font-family: var(--k2-sans);
+  font-size: 13px;
+  color: var(--k2-mist);
+}
+
+/* -------------------------------------------------------------- journey */
+
+/* The board: month cards pinned over a contour map of where you have been. */
+.k2-board {
+  margin-top: 28px;
+  padding: 28px;
+  border-radius: 20px;
+  background-color: var(--k2-contour-soft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M-20 60c40-30 90 10 130-10s70-50 150-10'/%3E%3Cpath d='M-20 100c50-30 100 20 140 0s80-40 140-10'/%3E%3Cpath d='M-20 140c40-20 80 30 130 10s70-40 150-20'/%3E%3Cpath d='M-20 180c50-20 90 20 140 0s80-30 140 0'/%3E%3Cpath d='M-20 220c40-10 90 20 130 0s80-20 150 0'/%3E%3Cpath d='M-20 20c50-20 90 10 140-10s80-20 140 0'/%3E%3C/g%3E%3C/svg%3E");
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 28px 24px;
+  align-items: start;
+}
+
+@media (max-width: 560px) {
+  .k2-board {
+    padding: 16px;
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+}
+
+.k2-pinned {
+  position: relative;
+  margin: 0;
+  padding: 22px 20px 18px;
+  background: var(--k2-sheet);
+  border-radius: 6px;
+  box-shadow: var(--k2-shadow);
+  width: 100%;
+  text-align: left;
+  display: block;
+}
+
+.k2-pinned::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--k2-blaze);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset -2px -2px 0 rgba(0, 0, 0, 0.12);
+}
+
+.k2-pinned:nth-child(3n + 1) {
+  transform: rotate(-0.6deg);
+}
+
+.k2-pinned:nth-child(3n + 2) {
+  transform: rotate(0.5deg);
+}
+
+.k2-pinned.is-current {
+  box-shadow: 0 0 0 2px var(--k2-granite), var(--k2-shadow);
+}
+
+.k2-pinned h3 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.k2-pinned .k2-prints {
+  padding: 12px 0 4px;
+  gap: 12px;
+}
+
+.k2-pinned .k2-print {
+  width: calc(50% - 6px);
+  padding: 5px 5px 14px;
+}
+
+.k2-pinned ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  font-size: 15px;
+}
+
+.k2-pinned li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+}
+
+.k2-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  max-width: 168px;
+  margin-top: 14px;
+}
+
+.k2-days span {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--k2-contour-soft);
+}
+
+.k2-days span.is-some {
+  background: color-mix(in srgb, var(--k2-pine) 45%, var(--k2-contour-soft));
+}
+
+.k2-days span.is-full {
+  background: var(--k2-pine);
+}
+
+.k2-days span.is-empty {
+  background: transparent;
+}
+
+.k2-days span.is-ahead {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--k2-contour-soft);
+}
+
+/* ------------------------------------------------------------- overlays */
+
+.k2-toasts {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 48px));
+}
+
+@media (max-width: 760px) {
+  .k2-toasts {
+    left: 16px;
+    right: 16px;
+    bottom: 84px;
+  }
+}
+
+.k2-toast {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--k2-granite);
+  color: var(--k2-on-dark);
+  box-shadow: var(--k2-shadow);
+  font-size: 15px;
+}
+
+.k2-toast small {
+  display: block;
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+.k2-sheet {
+  background: var(--k2-sheet);
+  border-radius: 16px;
+  box-shadow: var(--k2-shadow);
+  padding: 28px;
+}
+
+.k2-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--k2-mist);
+}
+
+.k2-empty .k2-h2 {
+  color: var(--k2-granite);
+  margin-bottom: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .k2 *,
+  .k2 *::before,
+  .k2 *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/*
+ * Screens that still come from the classic design (settings, the planner wizard, the
+ * habit editor…) are hosted inside the new shell. They read every colour and the body
+ * face from these variables, so they pick up the new palette without being rewritten.
+ */
+.k2-classic {
+  --canvas: var(--k2-snow);
+  --rail: var(--k2-snow);
+  --sheet: var(--k2-sheet);
+  --card: var(--k2-sheet);
+  --docket: var(--k2-contour-soft);
+  --rule: var(--k2-contour-soft);
+  --rule-soft: var(--k2-contour-soft);
+  --ink: var(--k2-granite);
+  --ink-2: var(--k2-granite);
+  --ink-3: var(--k2-mist);
+  --ink-4: var(--k2-faint);
+  --laurel: var(--k2-pine);
+  --laurel-deep: var(--k2-pine);
+  --laurel-wash: var(--k2-pine-soft);
+  --laurel-tint: var(--k2-pine-soft);
+  --ochre: #c18a10;
+  --ochre-deep: #8a5f00;
+  --ochre-wash: var(--k2-blaze-soft);
+  --ochre-tint: var(--k2-blaze-soft);
+  --slate: var(--k2-mist);
+  --slate-wash: var(--k2-contour-soft);
+  --on-solid: var(--k2-on-dark);
+  --shadow-rest: var(--k2-shadow);
+  --font-serif: var(--k2-sans);
+  --font-sans: var(--k2-sans);
+  --font-display: var(--k2-sans);
+  font-family: var(--k2-sans);
+}
+
+[data-theme='dark'] .k2-classic {
+  --ochre: #f2c14e;
+  --ochre-deep: #f2c14e;
+}
+
+.k2-classic .font-serif,
+.k2-classic .t-hero,
+.k2-classic .t-h1,
+.k2-classic .t-h2,
+.k2-classic .t-h3 {
+  /* Important, because the serif utility class sits in a later layer. */
+  font-family: var(--k2-sans) !important;
+  letter-spacing: -0.015em;
+}
+
+}
