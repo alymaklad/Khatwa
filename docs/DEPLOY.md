@@ -35,7 +35,7 @@ browser ──► Vercel CDN ── static app (.vercel/output/static)
 1. In the Neon console, open the project, then **Connection details**. Turn **off**
    "Connection pooling" and copy the connection string. That is `DATABASE_URL`.
 2. **Auth → Configuration**: copy the **Auth URL** (`NEON_AUTH_URL`). Under **Trusted
-   domains**, add the site's URL, e.g. `https://khatwa.vercel.app`. Without it, sign-in
+   domains**, add the site's URL, e.g. `https://khatwa-fawn.vercel.app`. Without it, sign-in
    fails with "The account service refused this site".
 3. For Google sign-in on the welcome screen, give Neon Auth a Google OAuth client of type
    **Web application** with the callback URL Neon shows (Settings → Auth → OAuth providers
