@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import:desktop": "node --import tsx scripts/importDesktop.ts",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "seed:demo": "node --import tsx scripts/seedDemo.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",

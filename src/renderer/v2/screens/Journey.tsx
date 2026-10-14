@@ -37,13 +37,15 @@ const yearOf = (ym: string): string => ym.slice(0, 4)
 
 function build(ym: string, perf: PerformanceView, goals: GoalView[], achievements: AchievementView[], journal: JournalEntry[]): Month {
   const days = perf.monthGrid.filter((d) => d.date.startsWith(ym))
+  // Days still ahead are drawn on the calendar but not counted as missed.
+  const past = days.filter((d) => d.date <= today())
   const pages = journal.filter((e) => e.date.startsWith(ym))
   return {
     ym,
     days,
-    minutes: days.reduce((s, d) => s + d.minutes, 0),
-    completed: days.reduce((s, d) => s + d.completed, 0),
-    scheduled: days.reduce((s, d) => s + d.scheduled, 0),
+    minutes: past.reduce((s, d) => s + d.minutes, 0),
+    completed: past.reduce((s, d) => s + d.completed, 0),
+    scheduled: past.reduce((s, d) => s + d.scheduled, 0),
     reached: goals.flatMap((g) => g.milestones.filter((m) => m.done && m.date?.startsWith(ym)).map((m) => ({ goal: g.title, title: m.title, date: m.date! }))),
     summits: goals.filter((g) => g.status === 'achieved' && g.closedAt?.startsWith(ym)).map((g) => g.title),
     earned: achievements.filter((a) => a.unlockedAt?.startsWith(ym)).map((a) => a.name),

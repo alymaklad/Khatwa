@@ -23,12 +23,15 @@ function rand(seed: number): () => number {
   }
 }
 
-/** A smooth open path through points, as cubic Béziers (Catmull–Rom). */
-function smooth(points: Pt[]): string {
+/**
+ * A smooth open path through points, as cubic Béziers (Catmull–Rom). `stretches` stops it
+ * early on the very same curve, which is how the walked part follows the trail exactly.
+ */
+function smooth(points: Pt[], stretches = points.length - 1): string {
   const n = points.length
   const at = (i: number): Pt => points[Math.max(0, Math.min(n - 1, i))]!
   let d = `M${points[0]![0].toFixed(1)},${points[0]![1].toFixed(1)}`
-  for (let i = 0; i < n - 1; i++) {
+  for (let i = 0; i < Math.min(stretches, n - 1); i++) {
     const [p0, p1, p2, p3] = [at(i - 1), at(i), at(i + 1), at(i + 2)]
     const c1: Pt = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
     const c2: Pt = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
@@ -141,7 +144,7 @@ export function ContourMountain({
         <path className="snowcap" d={land.snow} clipPath={`url(#k2-rock-${seed})`} />
 
         <path className="trail" d={smooth(trail)} />
-        {at > 0 ? <path className="trail is-walked" d={smooth(trail.slice(0, at + 1))} /> : null}
+        {at > 0 ? <path className="trail is-walked" d={smooth(trail, at)} /> : null}
 
         <path className="camp" d={`M${CAMP[0] - 22},${CAMP[1] + 14} L${CAMP[0]},${CAMP[1] - 16} L${CAMP[0] + 22},${CAMP[1] + 14} Z`} />
 
