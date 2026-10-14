@@ -922,34 +922,28 @@ body:has(#root > .k2) {
 
 /* -------------------------------------------------------------- journal */
 
-.k2-journal {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 40px;
-  align-items: start;
-}
-
-@media (max-width: 900px) {
-  .k2-journal {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
+/* Past pages, as a row of tabs above the notebook. */
+.k2-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .k2-pages {
-  position: sticky;
-  top: 88px;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: calc(100dvh - 120px);
-  overflow: auto;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .k2-pages button {
+  flex: none;
   display: flex;
   flex-direction: column;
-  padding: 8px 12px;
+  max-width: 170px;
+  padding: 6px 12px;
   border-radius: 8px;
   text-align: left;
 }
@@ -960,12 +954,12 @@ body:has(#root > .k2) {
 
 .k2-pages button[aria-current='true'] {
   background: var(--k2-sheet);
-  box-shadow: inset 3px 0 0 var(--k2-blaze);
+  box-shadow: inset 0 -3px 0 var(--k2-blaze);
 }
 
 .k2-pages b {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .k2-pages span {
@@ -976,104 +970,149 @@ body:has(#root > .k2) {
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .k2-pages {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    max-height: none;
-    padding-bottom: 4px;
-  }
-
-  .k2-pages button {
-    flex: none;
-    max-width: 160px;
-  }
-}
-
 /*
- * The page itself. The ruling and the text share one 32px rhythm, so what is typed
- * sits on the lines like ink on a notebook page.
+ * The notebook, lying open: two plain leaves bound by a wire coil down the gutter.
+ * The leaves shade towards the binding, as paper curves into a spine.
  */
-.k2-paper {
-  --rule: 32px;
-  --margin-at: 59px;
+.k2-notebook {
+  --coil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='18' viewBox='0 0 56 18'%3E%3Ccircle cx='12' cy='9' r='3.2' fill='%23c9d2d2'/%3E%3Ccircle cx='44' cy='9' r='3.2' fill='%23c9d2d2'/%3E%3Cpath d='M12 8 C12 1.5 44 1.5 44 8' fill='none' stroke='%2337403f' stroke-width='2.3' stroke-linecap='round'/%3E%3Cpath d='M12 11 C12 4.5 44 4.5 44 11' fill='none' stroke='%235d6867' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
   position: relative;
-  isolation: isolate;
-  background: var(--k2-sheet);
-  border-radius: 4px 14px 14px 4px;
-  box-shadow: var(--k2-shadow);
-  padding: 0 40px var(--rule) 84px;
-  min-height: 560px;
-  font-family: var(--k2-serif);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
-/* Ruling starts under the date, one line per rule: a tile one rule tall with its line at the foot. */
-.k2-paper::before {
-  content: "";
-  position: absolute;
-  inset: calc(var(--rule) * 3) 0 0;
-  z-index: -1;
-  background: linear-gradient(to top, var(--k2-paper-line) 1px, transparent 1px) 0 0 / 100% var(--rule) repeat-y;
+[data-theme='dark'] .k2 .k2-notebook {
+  --coil: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='18' viewBox='0 0 56 18'%3E%3Ccircle cx='12' cy='9' r='3.2' fill='%230e1416'/%3E%3Ccircle cx='44' cy='9' r='3.2' fill='%230e1416'/%3E%3Cpath d='M12 8 C12 1.5 44 1.5 44 8' fill='none' stroke='%23aeb9b8' stroke-width='2.3' stroke-linecap='round'/%3E%3Cpath d='M12 11 C12 4.5 44 4.5 44 11' fill='none' stroke='%237f8b8a' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
-/* The red margin line runs the full height of the page. */
-.k2-paper::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--margin-at);
-  width: 1px;
-  z-index: -1;
-  background: var(--k2-margin);
-}
-
-@media (max-width: 560px) {
-  .k2-paper {
-    padding: 0 18px var(--rule) 18px;
-  }
-
-  .k2-paper::after {
-    display: none;
-  }
-}
-
-.k2-paper-head {
-  height: calc(var(--rule) * 3);
+.k2-leaf {
+  --rule: 32px;
+  position: relative;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 6px;
+  flex-direction: column;
+  min-height: 700px;
+  min-width: 0;
+  background: var(--k2-sheet);
 }
 
-.k2-paper-date {
+.k2-leaf.is-left {
+  padding: 48px 60px 44px 52px;
+  border-radius: 8px 2px 2px 8px;
+  box-shadow: inset -30px 0 26px -26px rgba(31, 43, 48, 0.2), var(--k2-shadow);
+}
+
+.k2-leaf.is-right {
+  padding: 40px 52px 36px 64px;
+  border-radius: 2px 8px 8px 2px;
+  box-shadow: inset 30px 0 26px -26px rgba(31, 43, 48, 0.2), var(--k2-shadow);
+}
+
+.k2-coil {
+  position: absolute;
+  top: 22px;
+  bottom: 22px;
+  left: 50%;
+  width: 56px;
+  margin-left: -28px;
+  background: var(--coil) center top / 56px 18px repeat-y;
+  pointer-events: none;
+}
+
+/* Left leaf: photos and the day's question. */
+.k2-leaf-add {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1.5px dashed var(--k2-contour);
+  font-size: 14px;
+  color: var(--k2-mist);
+}
+
+.k2-leaf-add:hover {
+  border-color: var(--k2-mist);
+  color: var(--k2-granite);
+}
+
+.k2-leaf-quote {
+  margin: auto 0 0 auto;
+  max-width: 26ch;
+  padding-top: 32px;
+  text-align: right;
   font-family: var(--k2-serif);
   font-style: italic;
-  font-size: 26px;
-  line-height: 1.1;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--k2-mist);
+  text-wrap: balance;
+}
+
+/* Right leaf: the printed date box, the writing, the mood box. */
+.k2-leaf-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.k2-datebox {
+  display: flex;
+  margin: 0;
+  border: 1px solid var(--k2-contour);
+  border-radius: 3px;
+  font-size: 12.5px;
+}
+
+.k2-datebox div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 12px;
+}
+
+.k2-datebox div + div {
+  border-left: 1px solid var(--k2-contour);
+}
+
+.k2-datebox dt {
+  color: var(--k2-mist);
+}
+
+.k2-datebox dd {
+  margin: 0;
+  font-family: var(--k2-serif);
+  font-size: 15px;
   color: var(--k2-granite);
 }
 
-.k2-paper-title {
+.k2-leaf-title {
   display: block;
   width: 100%;
-  height: var(--rule);
+  margin-top: 28px;
   border: 0;
   background: transparent;
-  font-family: var(--k2-serif);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: var(--rule);
-  color: var(--k2-granite);
   padding: 0;
+  font-family: var(--k2-serif);
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 40px;
+  color: var(--k2-granite);
+}
+
+.k2-leaf-ask {
+  margin-top: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--k2-mist);
 }
 
 .k2-paper-body {
   display: block;
   width: 100%;
-  min-height: calc(var(--rule) * 12);
+  margin-top: 6px;
   border: 0;
   background: transparent;
   resize: none;
@@ -1086,32 +1125,83 @@ body:has(#root > .k2) {
   field-sizing: content;
 }
 
-.k2-paper-title:focus,
+.k2-leaf-title:focus,
 .k2-paper-body:focus {
   outline: none;
 }
 
-.k2-paper-title::placeholder,
+.k2-leaf-title::placeholder,
 .k2-paper-body::placeholder {
   color: var(--k2-faint);
   font-style: italic;
 }
 
-.k2-paper-foot {
+.k2-feelbox {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  min-height: var(--rule);
-  font-family: var(--k2-sans);
-  font-size: 14px;
+  gap: 8px;
+  margin: auto 0 0;
+  padding: 10px 14px 14px;
+  border: 1px solid var(--k2-contour);
+  border-radius: 3px;
+  min-width: 0;
+}
+
+.k2-feelbox legend {
+  padding: 0 6px;
+  font-size: 13px;
   color: var(--k2-mist);
+}
+
+.k2-leaf-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--k2-mist);
+}
+
+/* Narrow screens: one leaf at a time, the writing first; the binding is set aside. */
+@media (max-width: 860px) {
+  .k2-notebook {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .k2-coil {
+    display: none;
+  }
+
+  .k2-leaf {
+    min-height: 0;
+  }
+
+  .k2-leaf.is-right {
+    order: -1;
+    min-height: 560px;
+    padding: 28px 22px 24px;
+    border-radius: 8px;
+    box-shadow: var(--k2-shadow);
+  }
+
+  .k2-leaf.is-left {
+    padding: 24px 22px;
+    border-radius: 8px;
+    box-shadow: var(--k2-shadow);
+  }
+
+  .k2-leaf-quote {
+    margin-top: 16px;
+    padding-top: 0;
+  }
 }
 
 .k2-mood {
   height: 30px;
   padding: 0 12px;
   border-radius: 15px;
+  font-family: var(--k2-sans);
   font-size: 14px;
   color: var(--k2-mist);
   box-shadow: inset 0 0 0 1px var(--k2-contour);

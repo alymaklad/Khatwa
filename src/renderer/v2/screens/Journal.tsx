@@ -204,62 +204,33 @@ export default function JournalPage() {
   const promptKeys = Object.keys(page.prompts)
   const images = page.attachments.filter((a) => a.isImage)
 
+  const date = new Date(`${page.date}T12:00:00`)
+
   return (
     <div className="k2-page is-wide">
-      <div className="k2-journal">
-        <nav aria-label="Journal pages">
-          <button className="k2-btn is-quiet w-full mb-4" onClick={() => void open(blankPage())}>
-            <Plus size={16} /> New page
-          </button>
-          <div className="k2-pages">
-            {page.id === null ? (
-              <button aria-current="true">
-                <b>{shortDate(page.date)}</b>
-                <span>{page.title?.trim() || page.body.trim().split('\n')[0] || 'New page'}</span>
-              </button>
-            ) : null}
-            {pages.map((e) => (
-              <button key={e.id} aria-current={page.id === e.id ? 'true' : undefined} onClick={() => void open(fromEntry(e))}>
-                <b>{shortDate(e.date)}</b>
-                <span>{preview(e) || 'Untitled'}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        <article className="k2-paper" aria-label={`Journal page for ${writtenDate(page.date)}`}>
-          <header className="k2-paper-head">
-            <span className="k2-paper-date">{writtenDate(page.date)}</span>
-            <span className="k2-saved" aria-live="polite">
-              {save === 'saving' ? 'Saving' : save === 'saved' ? 'Saved' : save === 'error' ? 'Not saved' : ''}
-            </span>
-          </header>
-
-          <input
-            className="k2-paper-title"
-            value={page.title ?? ''}
-            placeholder="Title, if you like"
-            aria-label="Title"
-            onChange={(e) => edit({ title: e.target.value || null })}
-          />
-
-          {promptKeys.length > 0 ? (
-            promptKeys.map((key) => (
-              <div key={key}>
-                <div className="k2-paper-foot !text-[15px] !text-[var(--k2-granite)] font-semibold">{PROMPT_LABEL.get(key) ?? key}</div>
-                <Lines label={PROMPT_LABEL.get(key) ?? key} minRows={2} value={page.prompts[key] ?? ''} onChange={(v) => edit({ prompts: { ...page.prompts, [key]: v } })} />
-              </div>
-            ))
+      <nav className="k2-tabs-row" aria-label="Journal pages">
+        <button className="k2-btn is-quiet is-small shrink-0" onClick={() => void open(blankPage())}>
+          <Plus size={15} /> New page
+        </button>
+        <div className="k2-pages">
+          {page.id === null ? (
+            <button aria-current="true">
+              <b>{shortDate(page.date)}</b>
+              <span>{page.title?.trim() || page.body.trim().split('\n')[0] || 'New page'}</span>
+            </button>
           ) : null}
+          {pages.map((e) => (
+            <button key={e.id} aria-current={page.id === e.id ? 'true' : undefined} onClick={() => void open(fromEntry(e))}>
+              <b>{shortDate(e.date)}</b>
+              <span>{preview(e) || 'Untitled'}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
 
-          <Lines
-            label="Write"
-            minRows={promptKeys.length ? 3 : 12}
-            value={page.body}
-            placeholder={promptKeys.length ? 'Anything else' : prompt}
-            onChange={(v) => edit({ body: v })}
-          />
-
+      <div className="k2-notebook">
+        {/* The left page: photos taped in, and the day's question at the foot. */}
+        <section className="k2-leaf is-left" aria-label="Photos">
           {images.length > 0 ? (
             <div className="k2-prints">
               {images.map((a) => (
@@ -272,22 +243,68 @@ export default function JournalPage() {
               ))}
             </div>
           ) : null}
+          <button className="k2-leaf-add" disabled={busy} onClick={() => void addPhotos()}>
+            <ImagePlus size={18} /> {images.length ? 'Add another photo' : 'Tape in a photo'}
+          </button>
+          <blockquote className="k2-leaf-quote">{promptKeys.length ? 'Answer what you can. Leave the rest blank.' : prompt}</blockquote>
+        </section>
 
-          <div className="k2-paper-foot">
-            <span>How did today feel?</span>
+        <div className="k2-coil" aria-hidden="true" />
+
+        {/* The right page: a printed date box, the writing, and how the day felt. */}
+        <article className="k2-leaf is-right" aria-label={`Journal page for ${writtenDate(page.date)}`}>
+          <header className="k2-leaf-head">
+            <span className="k2-saved" aria-live="polite">
+              {save === 'saving' ? 'Saving' : save === 'saved' ? 'Saved' : save === 'error' ? 'Not saved' : ''}
+            </span>
+            <dl className="k2-datebox">
+              <div>
+                <dt>Date</dt>
+                <dd>{date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</dd>
+              </div>
+              <div>
+                <dt>Day</dt>
+                <dd>{date.toLocaleDateString(undefined, { weekday: 'short' })}</dd>
+              </div>
+            </dl>
+          </header>
+
+          <input
+            className="k2-leaf-title"
+            value={page.title ?? ''}
+            placeholder="Title, if you like"
+            aria-label="Title"
+            onChange={(e) => edit({ title: e.target.value || null })}
+          />
+
+          {promptKeys.map((key) => (
+            <div key={key}>
+              <div className="k2-leaf-ask">{PROMPT_LABEL.get(key) ?? key}</div>
+              <Lines label={PROMPT_LABEL.get(key) ?? key} minRows={2} value={page.prompts[key] ?? ''} onChange={(v) => edit({ prompts: { ...page.prompts, [key]: v } })} />
+            </div>
+          ))}
+
+          <Lines
+            label="Write"
+            minRows={promptKeys.length ? 3 : 11}
+            value={page.body}
+            placeholder={promptKeys.length ? 'Anything else' : 'Start writing'}
+            onChange={(v) => edit({ body: v })}
+          />
+
+          <fieldset className="k2-feelbox">
+            <legend>How did today feel?</legend>
             {MOODS.map((m) => (
               <button key={m} className="k2-mood" aria-pressed={page.mood === m} onClick={() => edit({ mood: page.mood === m ? null : m })}>
                 {MOOD_LABEL[m]}
               </button>
             ))}
-          </div>
-          <div className="k2-paper-foot mt-1">
-            <button className="inline-flex items-center gap-1.5 hover:text-[var(--k2-granite)]" disabled={busy} onClick={() => void addPhotos()}>
-              <ImagePlus size={16} /> Add a photo
-            </button>
-            {page.id !== null ? (
-              confirmDelete ? (
-                <span className="ml-auto inline-flex items-center gap-3">
+          </fieldset>
+
+          {page.id !== null ? (
+            <div className="k2-leaf-foot">
+              {confirmDelete ? (
+                <>
                   Delete this page?
                   <button className="text-[var(--k2-alert)] font-semibold" disabled={busy} onClick={() => void deletePage()}>
                     Delete
@@ -295,14 +312,14 @@ export default function JournalPage() {
                   <button className="font-semibold text-[var(--k2-granite)]" onClick={() => setConfirmDelete(false)}>
                     Keep
                   </button>
-                </span>
+                </>
               ) : (
-                <button className="ml-auto hover:text-[var(--k2-alert)]" onClick={() => setConfirmDelete(true)}>
+                <button className="hover:text-[var(--k2-alert)]" onClick={() => setConfirmDelete(true)}>
                   Delete page
                 </button>
-              )
-            ) : null}
-          </div>
+              )}
+            </div>
+          ) : null}
         </article>
       </div>
     </div>
