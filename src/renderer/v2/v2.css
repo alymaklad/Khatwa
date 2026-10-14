@@ -37,6 +37,11 @@ body:has(#root > .k2) {
   --k2-shadow: 0 1px 2px rgba(31, 43, 48, 0.06), 0 6px 20px -8px rgba(31, 43, 48, 0.18);
   --k2-paper-line: #d7e0df;
   --k2-margin: #e7b7a8;
+  --k2-sky: #e7eff0;
+  --k2-range: #d9e3e3;
+  --k2-rock: #b9c8c6;
+  --k2-rock-shade: #9fb1af;
+  --k2-snowcap: #ffffff;
 
   --k2-sans: 'Schibsted Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
   --k2-serif: 'Literata Variable', Georgia, 'Times New Roman', serif;
@@ -67,6 +72,11 @@ body:has(#root > .k2) {
   --k2-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
   --k2-paper-line: #26353a;
   --k2-margin: #5a3a33;
+  --k2-sky: #1a2529;
+  --k2-range: #212e33;
+  --k2-rock: #2d3c41;
+  --k2-rock-shade: #253337;
+  --k2-snowcap: #c5d1d0;
 }
 
 .k2 *:focus-visible {
@@ -525,129 +535,190 @@ body:has(#root > .k2) {
 
 /* ------------------------------------------------------------ mountains */
 
+/* The climb: a mountain seen from the side, the trail switching back up its face. */
+.k2-climb {
+  position: relative;
+}
+
 .k2-peak {
   display: block;
   width: 100%;
   height: auto;
+  overflow: visible;
 }
 
-.k2-peak .contour {
-  fill: none;
-  stroke: var(--k2-contour);
-  stroke-width: 1.2;
+.k2-peak .range {
+  fill: var(--k2-range);
 }
 
-.k2-peak .contour.is-index {
-  stroke-width: 2;
+.k2-peak .rock {
+  fill: var(--k2-rock);
+}
+
+.k2-peak .rock-shade {
+  fill: var(--k2-rock-shade);
+}
+
+.k2-peak .snowcap {
+  fill: var(--k2-snowcap);
 }
 
 .k2-peak .trail {
   fill: none;
   stroke: var(--k2-granite);
-  stroke-width: 2.2;
-  stroke-dasharray: 6 7;
+  stroke-width: 3;
+  stroke-dasharray: 2 9;
   stroke-linecap: round;
+  opacity: 0.55;
 }
 
 .k2-peak .trail.is-walked {
   stroke: var(--k2-pine);
   stroke-dasharray: none;
-  stroke-width: 3;
+  stroke-width: 5;
+  opacity: 1;
+}
+
+.k2-peak .camp {
+  fill: var(--k2-granite);
 }
 
 .k2-peak .waypoint {
   fill: var(--k2-sheet);
   stroke: var(--k2-granite);
-  stroke-width: 2;
+  stroke-width: 3;
 }
 
 .k2-peak .waypoint.is-done {
   fill: var(--k2-pine);
-  stroke: var(--k2-pine);
+  stroke: var(--k2-sheet);
+}
+
+.k2-peak .waypoint.is-next {
+  stroke: var(--k2-blaze);
+  stroke-width: 5;
+}
+
+.k2-peak .flag-pole {
+  stroke: var(--k2-granite);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.k2-peak .flag-cloth {
+  fill: var(--k2-mist);
+}
+
+.k2-peak .flag-cloth.is-reached {
+  fill: var(--k2-blaze);
 }
 
 .k2-peak .you {
   fill: var(--k2-blaze);
   stroke: var(--k2-granite);
-  stroke-width: 2;
+  stroke-width: 3.5;
 }
 
-/* Compact mountains are drawn small, so their lines are drawn heavier to read at size. */
-.k2-peak.is-compact .contour {
-  stroke-width: 2.4;
+/* Cards draw the climb small, so its marks are drawn heavier to read at size. */
+.k2-climb.is-compact .trail {
+  stroke-width: 7;
+  stroke-dasharray: 3 14;
 }
 
-.k2-peak.is-compact .contour.is-index {
-  stroke-width: 4;
-}
-
-.k2-peak.is-compact .trail {
-  stroke-width: 4;
-  stroke-dasharray: 10 11;
-}
-
-.k2-peak.is-compact .trail.is-walked {
-  stroke-width: 6;
+.k2-climb.is-compact .trail.is-walked {
+  stroke-width: 9;
   stroke-dasharray: none;
 }
 
-.k2-peak.is-compact .waypoint,
-.k2-peak.is-compact .you {
-  stroke-width: 4;
+.k2-climb.is-compact .waypoint {
+  r: 16px;
+  stroke-width: 6;
 }
 
-/* On a phone the big mountain is drawn as small as a card one, so it takes the same weights. */
-@media (max-width: 560px) {
-  .k2-peak .contour {
-    stroke-width: 2.4;
-  }
+.k2-climb.is-compact .you {
+  r: 22px;
+  stroke-width: 6;
+}
 
-  .k2-peak .contour.is-index {
-    stroke-width: 4;
+.k2-climb-label {
+  position: absolute;
+  max-width: 30%;
+  transform: translateY(-50%);
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--k2-sheet) 88%, transparent);
+  font-size: 13.5px;
+  line-height: 1.3;
+  color: var(--k2-granite);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.k2-climb-label.is-left {
+  text-align: right;
+}
+
+.k2-climb-label.is-done {
+  color: var(--k2-mist);
+}
+
+.k2-climb-label.is-next {
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--k2-blaze);
+}
+
+.k2-climb-label.is-left.is-next {
+  box-shadow: inset -3px 0 0 var(--k2-blaze);
+}
+
+.k2-climb-label b {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--k2-mist);
+}
+
+.k2-climb-label.is-summit {
+  font-size: 15px;
+  font-weight: 650;
+  max-width: 34%;
+}
+
+.k2-climb-label.is-camp {
+  background: none;
+  color: var(--k2-mist);
+}
+
+/* On a phone the labels would crowd the face; the milestone list below names every stop. */
+@media (max-width: 560px) {
+  .k2-climb-label {
+    display: none;
   }
 
   .k2-peak .trail {
-    stroke-width: 4;
-    stroke-dasharray: 10 11;
+    stroke-width: 5;
   }
 
   .k2-peak .trail.is-walked {
-    stroke-width: 6;
-  }
-
-  .k2-peak .waypoint,
-  .k2-peak .you {
-    stroke-width: 4;
+    stroke-width: 7;
   }
 
   .k2-peak .waypoint {
-    r: 12px;
+    r: 13px;
+    stroke-width: 4;
   }
 
   .k2-peak .you {
-    r: 17px;
+    r: 18px;
   }
-
-  .k2-peak .peak-label {
-    display: none;
-  }
-}
-
-.k2-peak .peak-label {
-  font-family: var(--k2-sans);
-  font-size: 13px;
-  fill: var(--k2-granite);
-}
-
-.k2-peak .peak-label.is-faint {
-  fill: var(--k2-mist);
 }
 
 .k2-mountain-hero {
   margin-top: 28px;
-  background: var(--k2-sheet);
+  background: linear-gradient(var(--k2-sky), var(--k2-sheet) 70%);
   border-radius: 18px;
-  padding: 8px 8px 0;
+  padding: 28px 0 0;
   box-shadow: var(--k2-shadow);
   overflow: hidden;
 }
@@ -838,9 +909,11 @@ body:has(#root > .k2) {
   background: var(--k2-pine);
 }
 
-.k2-mountain-card > .k2-peak {
+.k2-mountain-card > .k2-climb {
+  padding-top: 18px;
   border-radius: 10px;
-  background: var(--k2-snow);
+  background: var(--k2-sky);
+  overflow: hidden;
 }
 
 .k2-mountain-card > span {
