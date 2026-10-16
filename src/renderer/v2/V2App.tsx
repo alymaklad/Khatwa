@@ -248,14 +248,13 @@ export default function V2App() {
                       {m.label}
                     </a>
                   ))}
-                  <hr />
-                  <a role="menuitem" href="/classic">
-                    Classic design
-                  </a>
                   {account.configured ? (
-                    <button role="menuitem" onClick={() => void signOut()}>
-                      Sign out
-                    </button>
+                    <>
+                      <hr />
+                      <button role="menuitem" onClick={() => void signOut()}>
+                        Sign out
+                      </button>
+                    </>
                   ) : null}
                 </div>
               ) : null}

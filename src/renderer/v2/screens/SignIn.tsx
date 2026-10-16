@@ -100,11 +100,6 @@ export default function SignIn({ onSignedIn }: { onSignedIn: (user: AccountUser)
             {mode === 'sign-up' ? 'Sign in' : 'Create an account'}
           </button>
         </p>
-        <p className="k2-small text-center m-0">
-          <a className="k2-link" href="/classic">
-            Use the classic design
-          </a>
-        </p>
       </div>
     </main>
   )
