@@ -78,7 +78,7 @@ export default function Today() {
           <h2 className="k2-h2">Habits</h2>
           <a
             className="k2-link text-[15px]"
-            href="/new/habits?edit=new"
+            href="/habits?edit=new"
             onClick={(e) => {
               e.preventDefault()
               shell.navigate({ name: 'habits', edit: 'new' })

@@ -156,10 +156,10 @@ export default function Rail({
         <nav aria-label="Sync status">
           <SyncLine status={status} onOpen={onOpenSync} />
         </nav>
-        <a className="kh-nav-item" href="/new">
+        <a className="kh-nav-item" href="/">
           <Sparkles size={18} strokeWidth={1.7} className="shrink-0" />
           <span className="kh-nav-text">
-            <span className="kh-nav-title">Try the new design</span>
+            <span className="kh-nav-title">Back to the new design</span>
           </span>
         </a>
         <button className="kh-profile" onClick={() => onNavigate('me')}>

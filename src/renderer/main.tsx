@@ -5,24 +5,31 @@ import '@fontsource-variable/newsreader/opsz-italic.css'
 import '@fontsource-variable/plus-jakarta-sans/wght.css'
 // Installs window.api before any screen asks for data.
 import './lib/webApi'
-import App from './App'
+// Tailwind first: it fixes the cascade-layer order the new design's styles slot into.
 import './styles.css'
+import V2App from './v2/V2App'
 
-// The new design lives under /new; everything else is the classic app.
-const V2App = lazy(() => import('./v2/V2App'))
-const isNew = window.location.pathname === '/new' || window.location.pathname.startsWith('/new/')
+// The new design is the app. The classic design is kept, as it was, at /classic.
+const ClassicApp = lazy(() => import('./App'))
+const { pathname, search } = window.location
+const isClassic = pathname === '/classic' || pathname.startsWith('/classic/')
+
+// Addresses from when the new design lived under /new open the same screen.
+if (pathname === '/new' || pathname.startsWith('/new/')) {
+  window.history.replaceState(null, '', `${pathname.slice(4) || '/'}${search}`)
+}
 
 const el = document.getElementById('root')
 if (!el) throw new Error('root element missing')
 
 createRoot(el).render(
   <StrictMode>
-    {isNew ? (
+    {isClassic ? (
       <Suspense fallback={null}>
-        <V2App />
+        <ClassicApp />
       </Suspense>
     ) : (
-      <App />
+      <V2App />
     )}
   </StrictMode>
 )

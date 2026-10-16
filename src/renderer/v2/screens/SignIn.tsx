@@ -101,7 +101,7 @@ export default function SignIn({ onSignedIn }: { onSignedIn: (user: AccountUser)
           </button>
         </p>
         <p className="k2-small text-center m-0">
-          <a className="k2-link" href="/">
+          <a className="k2-link" href="/classic">
             Use the classic design
           </a>
         </p>

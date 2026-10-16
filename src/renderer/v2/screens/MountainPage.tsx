@@ -99,7 +99,7 @@ export default function MountainPage({ id }: { id: number }) {
   const back = (
     <a
       className="k2-small inline-flex items-center gap-1 hover:text-[var(--k2-granite)]"
-      href="/new/mountains"
+      href="/mountains"
       onClick={(e) => {
         e.preventDefault()
         shell.navigate({ name: 'mountains' })

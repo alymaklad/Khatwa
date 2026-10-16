@@ -73,6 +73,20 @@ export default function V2App() {
   }, [])
 
   useEffect(() => window.api.on.toast(pushToast), [pushToast])
+
+  // Coming back from a Google redirect: say how it went, then tidy the address bar.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const google = q.get('google')
+    const signin = q.get('signin')
+    if (!google && !signin) return
+    const detail = q.get('message') ?? undefined
+    if (google === 'connected') pushToast({ kind: 'success', title: 'Google is linked', body: 'Your habits now sync with Google Tasks and Calendar.' })
+    if (google === 'error') pushToast({ kind: 'error', title: 'Could not connect to Google', body: detail })
+    if (signin === 'error') pushToast({ kind: 'error', title: 'Google sign-in did not finish', body: detail })
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [pushToast])
+
   useEffect(() => window.api.on.syncStatus(setStatus), [])
 
   useEffect(() => {
@@ -235,7 +249,7 @@ export default function V2App() {
                     </a>
                   ))}
                   <hr />
-                  <a role="menuitem" href="/">
+                  <a role="menuitem" href="/classic">
                     Classic design
                   </a>
                   {account.configured ? (

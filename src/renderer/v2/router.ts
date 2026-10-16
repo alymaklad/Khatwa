@@ -1,16 +1,16 @@
 import type { Route } from '../khatwa/nav'
 
 /**
- * The new design gives every screen its own address under /new, so the browser's back
- * button, refresh and shared links all work. The classic design keeps its in-memory
- * routing at /, untouched.
+ * The main design gives every screen its own address, so the browser's back button,
+ * refresh and shared links all work. The classic design lives on at /classic with its
+ * own in-memory routing; addresses from when this design lived under /new still open.
  */
-export const BASE = '/new'
+export const BASE = ''
 
 export function toPath(route: Route): string {
   switch (route.name) {
     case 'today':
-      return BASE
+      return '/'
     case 'mountains':
       return `${BASE}/mountains`
     case 'mountain':
@@ -38,7 +38,7 @@ export function toPath(route: Route): string {
 
 export function fromLocation(pathname: string, search: string): Route {
   const q = new URLSearchParams(search)
-  const parts = pathname.replace(/^\/new\/?/, '').split('/').filter(Boolean)
+  const parts = pathname.replace(/^\/new(?=\/|$)/, '').split('/').filter(Boolean)
   const id = (s: string | undefined): number | null => (s && /^\d+$/.test(s) ? Number(s) : null)
   const [head, second, third] = parts
   switch (head) {
