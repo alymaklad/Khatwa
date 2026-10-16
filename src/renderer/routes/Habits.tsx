@@ -169,6 +169,7 @@ function HabitCard({
 
 export default function Habits({ edit }: { edit?: number | 'new' }) {
   const [editing, setEditing] = useState<number | 'new' | null>(edit ?? null)
+  const [showOthers, setShowOthers] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { data, error: loadError, refetch } = useData<Data>(async () => {
     const now = today()
@@ -198,6 +199,14 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
 
   const active = data.habits.filter((h) => h.active)
   const paused = data.habits.filter((h) => !h.active)
+  // Today's habits in the order of the day, with the ones already done moved to the end.
+  const todayCard = new Map(data.dash.cards.map((c) => [c.habitId, c]))
+  const isDone = (h: Habit): boolean => todayCard.get(h.id)?.status === 'complete'
+  const timeOf = (h: Habit): string => todayCard.get(h.id)?.scheduledTime ?? h.scheduledTime
+  const todays = active
+    .filter((h) => todayCard.has(h.id))
+    .sort((a, b) => Number(isDone(a)) - Number(isDone(b)) || timeOf(a).localeCompare(timeOf(b)))
+  const others = active.filter((h) => !todayCard.has(h.id)).sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
   const pending = data.proposals.filter((p) => p.state === 'pending')
   const allWeights = data.blocks.filter((b) => b.date >= addDays(now, -27)).map((b) => weight(b, now)).filter((w): w is number => w !== null)
   const overall = allWeights.length ? allWeights.reduce((s, w) => s + w, 0) / allWeights.length : null
@@ -291,7 +300,7 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
 
       <div className="flex items-center justify-between mb-5">
         <h2 className="t-h3 m-0 flex items-center gap-2">
-          <Sprout size={18} /> Your active habits
+          <Sprout size={18} /> Today's habits
         </h2>
         {/* <span className="t-stamp text-ink-4">Order by: time of day</span> */}
       </div>
@@ -305,12 +314,30 @@ export default function Habits({ edit }: { edit?: number | 'new' }) {
           </Btn>
         </div>
       ) : (
-        <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(360px,1fr))] mb-12">
-          {[...active]
-            .sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
-            .map((h) => (
-              <HabitCard key={h.id} habit={h} goal={h.goalId !== null ? goalsById.get(h.goalId) : undefined} stats={stats.get(h.id)!} dash={data.dash} onEdit={() => setEditing(h.id)} />
-            ))}
+        <div className="mb-12">
+          {todays.length === 0 ? (
+            <p className="t-italic m-0 mb-4">Nothing is scheduled today.</p>
+          ) : (
+            <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(360px,1fr))]">
+              {todays.map((h) => (
+                <HabitCard key={h.id} habit={h} goal={h.goalId !== null ? goalsById.get(h.goalId) : undefined} stats={stats.get(h.id)!} dash={data.dash} onEdit={() => setEditing(h.id)} />
+              ))}
+            </div>
+          )}
+          {others.length > 0 ? (
+            <>
+              <button className="t-caption mt-5 underline underline-offset-4 hover:text-ink" aria-expanded={showOthers} onClick={() => setShowOthers(!showOthers)}>
+                {showOthers ? 'Hide the habits not scheduled today' : `Show the ${plural(others.length, 'habit')} not scheduled today`}
+              </button>
+              {showOthers ? (
+                <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(360px,1fr))] mt-5">
+                  {others.map((h) => (
+                    <HabitCard key={h.id} habit={h} goal={h.goalId !== null ? goalsById.get(h.goalId) : undefined} stats={stats.get(h.id)!} dash={data.dash} onEdit={() => setEditing(h.id)} />
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
       )}
 
