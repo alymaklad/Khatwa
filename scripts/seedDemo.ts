@@ -8,6 +8,10 @@
  *     The local development database (PGlite), as used by `npm run dev -- --dev-user`.
  *     Stop the dev server first: PGlite allows one process at a time.
  *
+ *   npm run dev:demo
+ *     Runs the app on its own local demo database, filled by this script on the first run
+ *     (`--demo`). Your own local data is left alone.
+ *
  *   npm run seed:demo -- --live --email demo@example.com
  *     One account on the live site's database. Pull the production environment first with
  *     `npx vercel env pull .env.production.local --environment=production`; the script reads
@@ -28,6 +32,8 @@ import type { Connection } from '../src/server/http/database'
 const root = resolve(import.meta.dirname, '..')
 const args = process.argv.slice(2)
 const live = args.includes('--live')
+const demo = args.includes('--demo')
+const localDir = demo ? '.data/pglite-demo' : '.data/pglite'
 const email = live ? (args[args.indexOf('--email') + 1] ?? '').trim() : ''
 
 if (live) {
@@ -49,7 +55,7 @@ if (live) {
   for (const file of ['.env.local', '.env']) {
     if (existsSync(resolve(root, file))) process.loadEnvFile(resolve(root, file))
   }
-  if (process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED) {
+  if (!demo && (process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED)) {
     console.error('DATABASE_URL is set. Without --live this script only seeds the local database; unset it and run again.')
     process.exit(1)
   }
@@ -66,7 +72,7 @@ let pg: { close(): Promise<void> } | null = null
 if (!live) {
   const { PGlite } = await import('@electric-sql/pglite')
   mkdirSync(resolve(root, '.data'), { recursive: true })
-  const local = new PGlite(resolve(root, '.data/pglite'), { parsers: { 20: Number, 1700: Number } })
+  const local = new PGlite(resolve(root, localDir), { parsers: { 20: Number, 1700: Number } })
   pg = local
   setDriverFactory(async () => ({
     query: async (text, params) => {
@@ -500,7 +506,7 @@ await withTarget(async (c) => {
   }
   await ctx.schedule.expandHorizon()
   await ctx.engine.rebuildAll()
-  console.log(live ? `Done. Sign in as ${email} on the live site to see it.` : 'Done. Start the dev server and open http://localhost:5173')
+  console.log(live ? `Done. Sign in as ${email} on the live site to see it.` : demo ? 'Done.' : 'Done. Start the dev server and open http://localhost:5173')
 })
 
 await pg?.close()

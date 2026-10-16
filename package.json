@@ -7,6 +7,7 @@
   "private": true,
   "scripts": {
     "dev": "node --import tsx scripts/dev.ts",
+    "dev:demo": "node --import tsx scripts/dev.ts --demo",
     "build": "node --import tsx scripts/build.ts",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
