@@ -1,47 +1,114 @@
 /**
- * Fills the LOCAL development database with six months of sample data, so the app can be
- * seen the way it looks after real use: three mountains (one reached), their habits with
- * most past sessions done, milestones reached along the way, journal pages with photos,
- * a habit being let go, and today's to-dos.
+ * Fills an account with six months of sample data, so the app can be seen the way it looks
+ * after real use: three mountains (one reached), their habits with most past sessions done,
+ * milestones reached along the way, journal pages with photos, a habit being let go, and
+ * today's to-dos.
  *
  *   npm run seed:demo
+ *     The local development database (PGlite), as used by `npm run dev -- --dev-user`.
+ *     Stop the dev server first: PGlite allows one process at a time.
+ *
+ *   npm run seed:demo -- --live --email demo@example.com
+ *     One account on the live site's database. Pull the production environment first with
+ *     `npx vercel env pull .env.production.local --environment=production`; the script reads
+ *     it from there. Create the account on the site and sign in once, so it exists. The
+ *     script only fills an EMPTY account and refuses one that already has habits, mountains
+ *     or journal pages, so it can never mix sample data into someone's real data.
  *
  * It writes through the app's own services, replaying each day with that day's date, so
- * streaks, points and achievements come out exactly as if they had been earned. It only
- * touches the local PGlite database used by `npm run dev -- --dev-user`, and refuses to run
- * against Neon. Stop the dev server first: PGlite allows one process at a time.
+ * streaks, points and achievements come out exactly as if they had been earned.
  */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { crc32, deflateSync } from 'node:zlib'
 import type { GoalPlan, GoalView, JournalDraft, LocalDate, Mood } from '../src/shared/types'
+import type { Connection } from '../src/server/http/database'
 
 const root = resolve(import.meta.dirname, '..')
-for (const file of ['.env.local', '.env']) {
-  if (existsSync(resolve(root, file))) process.loadEnvFile(resolve(root, file))
-}
-if (process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED) {
-  console.error('DATABASE_URL is set. This script only seeds the local PGlite database; unset it and run again.')
-  process.exit(1)
+const args = process.argv.slice(2)
+const live = args.includes('--live')
+const email = live ? (args[args.indexOf('--email') + 1] ?? '').trim() : ''
+
+if (live) {
+  if (!email || email.startsWith('--')) {
+    console.error('Name the account to fill: npm run seed:demo -- --live --email demo@example.com')
+    process.exit(1)
+  }
+  const file = resolve(root, '.env.production.local')
+  if (!existsSync(file)) {
+    console.error('No .env.production.local. Pull it first: npx vercel env pull .env.production.local --environment=production')
+    process.exit(1)
+  }
+  process.loadEnvFile(file)
+  if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_UNPOOLED) {
+    console.error('.env.production.local has no DATABASE_URL. Pull the production environment again.')
+    process.exit(1)
+  }
+} else {
+  for (const file of ['.env.local', '.env']) {
+    if (existsSync(resolve(root, file))) process.loadEnvFile(resolve(root, file))
+  }
+  if (process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED) {
+    console.error('DATABASE_URL is set. Without --live this script only seeds the local database; unset it and run again.')
+    process.exit(1)
+  }
 }
 
-const { PGlite } = await import('@electric-sql/pglite')
-const { setDriverFactory, withAccount } = await import('../src/server/http/database')
+const { setDriverFactory, withAccount, withSchema } = await import('../src/server/http/database')
 const { createContext } = await import('../src/server/context')
 const { addDays, todayIn } = await import('../src/server/domain/time')
 const { expand } = await import('../src/server/domain/recurrence')
+const { blobConfigured } = await import('../src/server/platform/attachmentStore')
 
-mkdirSync(resolve(root, '.data'), { recursive: true })
-const pg = new PGlite(resolve(root, '.data/pglite'), { parsers: { 20: Number, 1700: Number } })
-setDriverFactory(async () => ({
-  query: async (text, params) => {
-    const r = await pg.query<Record<string, unknown>>(text, params)
-    return { rows: r.rows, rowCount: r.affectedRows ?? r.rows.length }
-  },
-  exec: async (text) => void (await pg.exec(text)),
-  close: async () => undefined
-}))
+/** The local database, opened only when seeding locally. */
+let pg: { close(): Promise<void> } | null = null
+if (!live) {
+  const { PGlite } = await import('@electric-sql/pglite')
+  mkdirSync(resolve(root, '.data'), { recursive: true })
+  const local = new PGlite(resolve(root, '.data/pglite'), { parsers: { 20: Number, 1700: Number } })
+  pg = local
+  setDriverFactory(async () => ({
+    query: async (text, params) => {
+      const r = await local.query<Record<string, unknown>>(text, params)
+      return { rows: r.rows, rowCount: r.affectedRows ?? r.rows.length }
+    },
+    exec: async (text) => void (await local.exec(text)),
+    close: async () => undefined
+  }))
+}
+
+/** Runs `fn` on the account being filled: the local dev user, or the live account named by email. */
+async function withTarget(fn: (c: Connection) => Promise<void>): Promise<void> {
+  if (!live) return withAccount({ id: 'local', email: 'local@localhost' }, fn)
+  const { databaseUrl, neonDriver } = await import('../src/server/persistence/neon')
+  const driver = await neonDriver(databaseUrl())
+  let schema: string | null = null
+  try {
+    const r = await driver.query('SELECT schema_name FROM public.khatwa_account WHERE lower(email) = lower($1)', [email])
+    schema = r.rows[0] ? String(r.rows[0].schema_name) : null
+  } finally {
+    await driver.close()
+  }
+  if (!schema) {
+    console.error(`No account for ${email} on the live site. Create it there and sign in once, then run this again.`)
+    process.exit(1)
+  }
+  console.log(`Filling ${email} on the live site.`)
+  return withSchema(schema, fn)
+}
+
+/** Stores a photo where the app will look for it: Vercel Blob in production, else on disk. */
+async function storePhoto(schema: string, storedName: string, body: Buffer): Promise<void> {
+  if (blobConfigured()) {
+    const { put } = await import('@vercel/blob')
+    await put(`${schema}/${storedName}`, body, { access: 'private', contentType: 'image/png', addRandomSuffix: false })
+    return
+  }
+  const folder = join(root, '.data', 'attachments', schema)
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(join(folder, storedName), body)
+}
 
 // ------------------------------------------------------------------ helpers
 
@@ -306,8 +373,15 @@ const PAGES: { day: number; title: string | null; body: string; mood: Mood; phot
 
 // ------------------------------------------------------------------ run
 
-await withAccount({ id: 'local', email: 'local@localhost' }, async (c) => {
+await withTarget(async (c) => {
   const ctx = createContext({ db: c.db, schema: c.schema })
+
+  // A live account must be empty: sample data is never mixed into real use.
+  if (live && ((await ctx.habits.list()).length || (await ctx.goals.list()).length || (await ctx.repos.journal.list()).length)) {
+    console.error(`${email} already has habits, mountains or journal pages. Use a new, empty account for the demo.`)
+    process.exitCode = 1
+    return
+  }
 
   if ((await ctx.goals.list()).some((g) => g.title === MOUNTAINS[0]!.title)) {
     console.log('The sample data is already there. Nothing was added.')
@@ -352,14 +426,12 @@ await withAccount({ id: 'local', email: 'local@localhost' }, async (c) => {
   }
 
   // Journal pages, some with a photo taped in.
-  const folder = join(root, '.data', 'attachments', c.schema)
-  mkdirSync(folder, { recursive: true })
   for (const p of PAGES) {
     let attachmentIds: number[] | undefined
     if (p.photo !== undefined) {
       const photo = PHOTOS[p.photo]!
       const storedName = `${randomUUID()}.png`
-      writeFileSync(join(folder, storedName), photo.data())
+      await storePhoto(c.schema, storedName, photo.data())
       const [a] = await ctx.reflect.registerAttachments([{ storedName, originalName: photo.name }])
       attachmentIds = a ? [a.id] : undefined
     }
@@ -428,7 +500,7 @@ await withAccount({ id: 'local', email: 'local@localhost' }, async (c) => {
   }
   await ctx.schedule.expandHorizon()
   await ctx.engine.rebuildAll()
-  console.log('Done. Start the dev server and open http://localhost:5173/new')
+  console.log(live ? `Done. Sign in as ${email} on the live site to see it.` : 'Done. Start the dev server and open http://localhost:5173')
 })
 
-await pg.close()
+await pg?.close()

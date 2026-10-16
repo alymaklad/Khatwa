@@ -2,6 +2,7 @@
 .DS_Store
 .env
 .env.local
+.env.*.local
 .smoke/
 design/**/*-probe.html
 design/**/habit-league-*.html
